@@ -184,15 +184,47 @@ function headpat() {
   if (mood === "good") play([...putDownFirst(), "pat"], "good");
 }
 
-// John Nintendo loops on his own (only visible when gezine is bad)
-const JOHN = { frames: [0, 1, 2, 3].map((n) => "images/john/" + n + ".png"), ms: [550, 350, 650, 300] };
-JOHN.frames.forEach((f) => { new Image().src = f; });
-let johnFrame = 0;
-(function johnStep() {
-  document.getElementById("john-img").src = JOHN.frames[johnFrame];
-  setTimeout(johnStep, JOHN.ms[johnFrame]);
-  johnFrame = (johnFrame + 1) % JOHN.frames.length;
-})();
+// John Nintendo: rises up when gezine is caught, looms, then chases the money bag away
+const JA = {
+  loop:  { frames: frames("john"),       ms: [550, 350, 650, 300] },
+  enter: { frames: frames("john-enter"), ms: [350, 350, 400, 300] },
+  leave: { frames: frames("john-leave"), ms: [350, 500, 450, 500] },
+};
+for (const a of Object.values(JA)) for (const f of a.frames) new Image().src = f; // preload
+
+let johnTimer;
+// then = "loop" to keep looming afterwards, or "hide" to disappear afterwards
+function johnPlay(name, then) {
+  clearTimeout(johnTimer);
+  const el = document.getElementById("john-img");
+  const a = JA[name];
+  let i = 0;
+  const step = () => {
+    if (i >= a.frames.length) {
+      if (then === "hide") { document.getElementById("john").hidden = true; return; }
+      return johnPlay("loop", "loop");
+    }
+    el.src = a.frames[i];
+    johnTimer = setTimeout(step, a.ms[i]);
+    i++;
+  };
+  step();
+}
+
+let johnShown = false, firstMood = true;
+function johnMood(bad) {
+  const box = document.getElementById("john");
+  if (bad && !johnShown) {
+    box.hidden = false;
+    johnPlay(firstMood ? "loop" : "enter", "loop"); // no entrance on first page load
+  } else if (!bad && johnShown) {
+    johnPlay("leave", "hide");
+  } else if (!bad) {
+    box.hidden = true;
+  }
+  johnShown = bad;
+  firstMood = false;
+}
 
 // every 20 seconds, if he's being good and just idling, he plays his console for a bit
 setInterval(() => {
@@ -204,7 +236,7 @@ function setMood(bad) {
   const img = document.getElementById("gezine-img");
   changeMood(bad);
   img.alt = bad ? "gezine looking guilty with a bag of money" : "gezine being a good boy";
-  document.getElementById("john").hidden = !bad;
+  johnMood(bad);
   show("mood-btn", bad ? "Press F to pay respects to the exploits" : "Give gezine headpats");
   for (const [node, text] of originals) node.nodeValue = text; // undo old uwu
   originals.clear();
