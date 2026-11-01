@@ -33,7 +33,7 @@ If he is caught earning money from John Nintendo then it will show on this page.
 
 <div class="gezine">
   <div class="frame">
-    <img id="gezine-img" src="images/good.png" alt="gezine being a good boy" width="260">
+    <img id="gezine-img" src="images/good/0.png" alt="gezine being a good boy" width="260">
     <div class="stamp">WANTED</div>
   </div>
   <div class="bubble" id="bubble">...</div>
@@ -100,10 +100,33 @@ document.getElementById("mood-btn").onclick = () => {
   else show("mood-count", "headpats given: " + ++pats + " " + "♡".repeat(Math.min(pats, 20)));
 };
 
+// hand-drawn style animations: each one is a list of frames and how long each frame shows (ms)
+const ANIMS = {
+  good: { frames: ["images/good/0.png", "images/good/1.png", "images/good/2.png", "images/good/3.png"], ms: [700, 350, 140, 450] },
+  bad:  { frames: ["images/bad.png"], ms: [1000] },
+};
+for (const a of Object.values(ANIMS)) for (const f of a.frames) new Image().src = f; // preload frames
+
+let animTimer, animName;
+function playAnim(name) {
+  if (animName === name) return;
+  animName = name;
+  clearTimeout(animTimer);
+  const img = document.getElementById("gezine-img");
+  let i = 0;
+  const step = () => {
+    const a = ANIMS[name];
+    img.src = a.frames[i];
+    animTimer = setTimeout(step, a.ms[i]);
+    i = (i + 1) % a.frames.length;
+  };
+  step();
+}
+
 function setMood(bad) {
   isBad = bad;
   const img = document.getElementById("gezine-img");
-  img.src = bad ? "images/bad.png" : "images/good.png";
+  playAnim(bad ? "bad" : "good");
   img.alt = bad ? "gezine looking guilty with a bag of money" : "gezine being a good boy";
   document.getElementById("john").hidden = !bad;
   show("mood-btn", bad ? "Press F to pay respects to the exploits" : "Give gezine headpats");
