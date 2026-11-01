@@ -103,7 +103,7 @@ document.getElementById("mood-btn").onclick = () => {
 // hand-drawn style animations: each one is a list of frames and how long each frame shows (ms)
 const ANIMS = {
   good: { frames: ["images/good/0.png", "images/good/1.png", "images/good/2.png", "images/good/3.png"], ms: [700, 350, 140, 450] },
-  bad:  { frames: ["images/bad.png"], ms: [1000] },
+  bad:  { frames: ["images/bad/0.png", "images/bad/1.png", "images/bad/2.png", "images/bad/3.png"], ms: [450, 180, 380, 220] },
 };
 for (const a of Object.values(ANIMS)) for (const f of a.frames) new Image().src = f; // preload frames
 
