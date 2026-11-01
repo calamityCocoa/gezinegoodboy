@@ -1,29 +1,45 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gezine Good Boy Tracker</title>
 <style>
-  .gezine { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
-  #gezine-img { display: block; height: 300px; width: auto; max-width: 100%; object-fit: contain; }
-  .bubble { border: 2px solid black; border-radius: 15px; padding: 10px; max-width: 300px; }
+  body {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 16px;
+    font: 17px/1.5 Georgia, "Times New Roman", serif;
+    color: #111;
+    background: #fff;
+  }
+  h1 { font-size: 2em; line-height: 1.2; margin: 16px 0 4px; }
+  h2 { font-size: 1.25em; margin: 32px 0 8px; }
+  marquee { font-size: .9em; }
+  .verdict { font-size: 1.4em; font-weight: bold; margin: 8px 0 20px; }
+  small { color: #555; }
 
-  .frame { position: relative; }
+  /* the drawing on the left, his speech bubble on the right */
+  .hero { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-bottom: 16px; }
+  .bubble { flex: 1 1 200px; border: 1px solid #111; border-radius: 12px; padding: 10px 14px; margin: 0; }
 
-  /* bad boy: flashing page, shaking drawing, WANTED stamp */
-  .stamp { display: none; position: absolute; top: 40%; left: -10px; right: -10px; text-align: center;
-           color: red; border: 4px solid red; background: rgba(255,255,255,.75);
-           font: bold 30px Impact, "Arial Black", sans-serif; transform: rotate(-20deg); }
-  body.bad .stamp { display: block; }
-  body.bad { animation: flash 1s steps(1) infinite; }
-  /* smooth motion on top of the hand-drawn frames (like anime "on twos") */
-  #gezine-img, #john-img { transform-origin: 50% 100%; }
+  /* square stage: gezine close up, or zoomed out with John Nintendo */
+  #stage { position: relative; width: 320px; max-width: 100%; aspect-ratio: 1; overflow: hidden; border: 1px solid #111; }
+  #gez {
+    position: absolute; left: 6.19%; bottom: 2%; width: 87.62%; aspect-ratio: 400 / 420;
+    transform-origin: 44.12% 98.1%;              /* her feet */
+    transition: transform 1s ease-in-out;
+  }
+  #gez.far { transform: translate(10.06%, 1.77%) scale(.693); }  /* where she stands in John's scene */
+  #gez img { display: block; width: 100%; height: auto; transform-origin: 50% 100%; }
+  #john-img { position: absolute; top: 0; left: 0; width: 100%; height: auto; }
+  [hidden] { display: none !important; }
+
+  /* smooth motion on top of the hand-drawn frames */
   body.good #gezine-img { animation: bob 1.64s ease-in-out infinite; }
   body.good #gezine-img.patting { animation: squish 1.46s ease-in-out 1; }
   body.good #gezine-img.gaming { animation: bounce .6s ease-in-out infinite; }
   body.bad #gezine-img { animation: tremble .41s linear infinite; }
-  #john-img { animation: loom 1.85s ease-in-out infinite; }
   @keyframes bob { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-6px) scale(.99, 1.015); } }
   @keyframes squish {
     0% { transform: scale(1, 1); } 15% { transform: scale(1.03, .95); } 40% { transform: scale(1.06, .9); }
@@ -33,51 +49,59 @@
     0%, 100% { transform: translate(0, 0) rotate(0); } 20% { transform: translate(-2px, 1px) rotate(-.8deg); }
     40% { transform: translate(2px, -1px) rotate(.6deg); } 60% { transform: translate(-1px, 1px) rotate(.8deg); }
     80% { transform: translate(2px, 0) rotate(-.5deg); } }
-  @keyframes loom { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
-  @keyframes flash { 50% { background: #ffd0d0; } }
-  @keyframes shake { 25% { transform: translate(-4px, 2px); } 75% { transform: translate(4px, -2px); } }
+
+  table { border-collapse: collapse; margin: 8px 0; }
+  th, td { border: 1px solid #999; padding: 4px 8px; text-align: left; vertical-align: top; }
+  #reports-table { width: 100%; font-size: .95em; }
+  tr.nintendo { font-weight: bold; }
+  button { font: inherit; font-size: .9em; }
+  .buttons p { margin: 6px 0; }
+  footer { margin-top: 40px; border-top: 1px solid #ccc; padding-top: 8px; }
+  footer p { margin: 4px 0; }
 </style>
 </head>
 <body>
 
 <h1>Is gezine a good boy?</h1>
 <marquee>BREAKING NEWS: John Nintendo's lawyers have entered the chat &bull;&bull;&bull; ETA WEN? &bull;&bull;&bull; DO NOT UPDATE YOUR SWITCH 2 &bull;&bull;&bull; gezine has been spotted near a hut &bull;&bull;&bull; it's not a brick if you believe hard enough &bull;&bull;&bull; John Nintendo is watching &bull;&bull;&bull;</marquee>
-<h2 id="verdict">Checking...</h2>
+<p class="verdict" id="verdict">Checking...</p>
+
+<div class="hero">
+  <div id="stage">
+    <div id="gez"><img id="gezine-img" src="images/good/0.png" alt="gezine being a good boy"></div>
+    <img id="john-img" src="images/john/0.png" alt="John Nintendo looming over gezine" hidden>
+  </div>
+  <p class="bubble" id="bubble">...</p>
+</div>
 
 <p>This silly little website tracks Gezine's hackerone account to make sure that he hasn't been naughty and earned money from John Nintendo.
 If he is caught earning money from John Nintendo then it will show on this page. Gezine will get a slap on the ass if he does anything like that as he has been a bad boy. A big ass whooping for him.</p>
 
-<div class="gezine">
-  <div class="frame">
-    <img id="gezine-img" src="images/good/0.png" alt="gezine being a good boy">
-    <div class="stamp">WANTED</div>
-  </div>
-  <div class="bubble" id="bubble">...</div>
+<table>
+  <tr><th>Reports to John Nintendo</th><td id="count">?</td></tr>
+  <tr><th>Days since the last one</th><td id="days">?</td></tr>
+  <tr><th>Total hackerone reports</th><td id="total">?</td></tr>
+</table>
+
+<div class="buttons">
+  <p><button id="mood-btn">...</button> <span id="mood-count"></span></p>
+  <p><button id="eta-btn">ETA WEN?</button> <span id="eta"></span></p>
 </div>
 
-<p>Reports to John Nintendo: <b id="count">?</b><br>
-Days since last report to John Nintendo: <b id="days">?</b><br>
-Total hackerone reports: <b id="total">?</b></p>
-
-<p id="john" hidden><img id="john-img" src="images/john/0.png" alt="John Nintendo coming for gezine" width="350" style="max-width:100%;height:auto"><br>
-<b>uh oh. John Nintendo has come to collect.</b></p>
-
-<p><button id="mood-btn">...</button> <span id="mood-count"></span></p>
-<p><button id="eta-btn">ETA WEN?</button> <span id="eta"></span></p>
-
-<h3>His reports</h3>
-<ul id="reports"><li>Loading...</li></ul>
+<h2>His reports</h2>
+<table id="reports-table">
+  <thead><tr><th>Report</th><th>Company</th><th>Status</th><th>Date</th></tr></thead>
+  <tbody id="reports"><tr><td colspan="4">Loading...</td></tr></tbody>
+</table>
 <p><small id="checked"></small></p>
 
 <p>I just want to kiss you John Nintendo you are so sexy and strong and muscular with your awesome business practices, please take all of my money</p>
 
-<p><small>Gezine drawings based on the original from the <a href="https://www.reddit.com/r/switch2hacks/comments/1xhtmjt/two_sides/">"Two sides" post on r/switch2hacks</a>, all credit to the original artist.</small></p>
-
-<p><small>This whole website is satire. It's all a big joke, so don't take offence, everything is over-exaggerated on purpose.</small></p>
-
-<hr>
-<p><small>🚧 This website is under construction forever 🚧<br>
-You are visitor number <b>000069420</b></small></p>
+<footer>
+  <p><small>Gezine drawings based on the original from the <a href="https://www.reddit.com/r/switch2hacks/comments/1xhtmjt/two_sides/">"Two sides" post on r/switch2hacks</a>, all credit to the original artist.</small></p>
+  <p><small>This whole website is satire. It's all a big joke, so don't take offence, everything is over-exaggerated on purpose.</small></p>
+  <p><small>This website is under construction forever. You are visitor number 000069420.</small></p>
+</footer>
 
 <script>
 // the backend lives in api/gezine.js on the same Vercel site
@@ -86,10 +110,11 @@ const API_URL = "/api/gezine";
 const BAD = "I've been a bad boy!";
 const GOOD = "I'm living in a hut in the middle of nowhere and not helping the hacking community with their Switch 2 fun and i'm boring and sad and enabled emails so nintendo could DMCA me and stuff";
 
-function show(id, text) { document.getElementById(id).textContent = text; }
+const $ = (id) => document.getElementById(id);
+function show(id, text) { $(id).textContent = text; }
 
-// uwuify every bit of text on the page (and undo it if he turns bad)
-const FACES = ["uwu", "owo", ">w<", "^w^", ":3", "nya~", "(˶ᵔ ᵕ ᵔ˶)"];
+// ---------- uwu mode (when he's good) ----------
+const FACES = ["uwu", "owo", ">w<", "^w^", ":3", "nya~"];
 const originals = new Map();
 
 function uwu(t) {
@@ -100,28 +125,41 @@ function uwu(t) {
     .replace(/([.!?])(\s|$)/g, (m, p, s) => p + " " + FACES[Math.floor(Math.random() * FACES.length)] + s);
 }
 
-// ETA WEN button
+function setUwu(on) {
+  for (const [node, text] of originals) node.nodeValue = text; // undo the old uwu first
+  originals.clear();
+  if (!on) return;
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+    acceptNode: (n) => ["SCRIPT", "STYLE"].includes(n.parentNode.nodeName) || !n.nodeValue.trim()
+      ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
+  });
+  while (walker.nextNode()) {
+    originals.set(walker.currentNode, walker.currentNode.nodeValue);
+    walker.currentNode.nodeValue = uwu(walker.currentNode.nodeValue);
+  }
+}
+
+// ---------- buttons ----------
 const ETAS = [
   "Soon™", "2 weeks", "When it's ready", "Every time you ask it gets delayed a week",
   "When John Nintendo stops watching", "gezine is busy in his hut, try again later",
   "After the next firmware update patches it", "Never. Go outside.",
 ];
-document.getElementById("eta-btn").onclick = () =>
-  show("eta", ETAS[Math.floor(Math.random() * ETAS.length)]);
+$("eta-btn").onclick = () => show("eta", ETAS[Math.floor(Math.random() * ETAS.length)]);
 
-// headpats when he's good, press F when he's bad
 let isBad = false, pats = 0, fs = 0;
-document.getElementById("mood-btn").onclick = () => {
-  if (isBad) show("mood-count", "F".repeat(Math.min(++fs, 50)) + " (" + fs + " respects paid to the exploits)");
-  else {
-    show("mood-count", "headpats given: " + ++pats + " " + "♡".repeat(Math.min(pats, 20)));
+$("mood-btn").onclick = () => {
+  if (isBad) {
+    show("mood-count", "F".repeat(Math.min(++fs, 40)) + " (" + fs + " respects paid to the exploits)");
+  } else {
+    show("mood-count", "headpats given: " + ++pats);
     headpat();
   }
 };
 
-// ---------- animations ----------
+// ---------- gezine's animations ----------
 // Every animation starts and ends on the neutral pose (or a matching transition),
-// so the director below can chain any of them without a jump.
+// so they can be chained in any order without a jump.
 const frames = (dir) => [0, 1, 2, 3].map((n) => "images/" + dir + "/" + n + ".png");
 const ANIMS = {
   good:   { frames: frames("good"),   ms: [700, 350, 140, 450] },
@@ -130,18 +168,22 @@ const ANIMS = {
   game:   { frames: frames("game"),   ms: [450, 200, 350, 650], cls: "gaming" },
   pickup: { frames: frames("pickup"), ms: [250, 300, 300, 250], holds: true },
   caught: { frames: frames("caught"), ms: [200, 550, 350, 300] },
-  relief: { frames: frames("relief"), ms: [300, 380, 650, 300] },
 };
-// putting the console down = picking it up backwards
 ANIMS.putdown = { frames: [...ANIMS.pickup.frames].reverse(), ms: [...ANIMS.pickup.ms].reverse(), drops: true };
-for (const a of Object.values(ANIMS)) for (const f of a.frames) new Image().src = f; // preload
 
-let animTimer, busy = false, holding = false, mood = null;
+const JOHN = {
+  loop:  { frames: frames("john"),       ms: [550, 350, 650, 300] },
+  enter: { frames: frames("john-enter"), ms: [350, 350, 400, 300] },
+  leave: { frames: frames("john-leave"), ms: [350, 500, 450, 500] },
+};
+for (const a of [...Object.values(ANIMS), ...Object.values(JOHN)]) for (const f of a.frames) new Image().src = f;
 
-// play each step once, in order, then loop `loop` forever
-function play(steps, loop) {
-  clearTimeout(animTimer);
-  const img = document.getElementById("gezine-img");
+let gezTimer, busy = false, holding = false;
+
+// play each step once, in order, then loop `loop` forever. onDone runs when the steps finish.
+function play(steps, loop, onDone) {
+  clearTimeout(gezTimer);
+  const img = $("gezine-img");
   const seq = steps.map((n) => ANIMS[n]);
   let s = 0, i = 0;
   busy = seq.length > 0;
@@ -159,101 +201,106 @@ function play(steps, loop) {
       if (seq[s].drops) holding = false;
       s++; i = 0;
       begin(seq[s] || ANIMS[loop]);
+      if (s === seq.length && onDone) onDone();
     }
     if (s >= seq.length) busy = false;
     const a = seq[s] || ANIMS[loop];
-    if (i >= a.frames.length) i = 0; // looping
+    if (i >= a.frames.length) i = 0;
     img.src = a.frames[i];
-    animTimer = setTimeout(step, a.ms[i]);
+    gezTimer = setTimeout(step, a.ms[i]);
     i++;
   };
   step();
 }
 
-const putDownFirst = () => (holding ? ["putdown"] : []);
-
-function changeMood(bad) {
-  const target = bad ? "bad" : "good";
-  if (mood === target) return;
-  if (mood === null) play([], target); // first load: no transition
-  else play([...putDownFirst(), bad ? "caught" : "relief"], target);
-  mood = target;
-}
-
-function headpat() {
-  if (mood === "good") play([...putDownFirst(), "pat"], "good");
-}
-
-// John Nintendo: rises up when gezine is caught, looms, then chases the money bag away
-const JA = {
-  loop:  { frames: frames("john"),       ms: [550, 350, 650, 300] },
-  enter: { frames: frames("john-enter"), ms: [350, 350, 400, 300] },
-  leave: { frames: frames("john-leave"), ms: [350, 500, 450, 500] },
-};
-for (const a of Object.values(JA)) for (const f of a.frames) new Image().src = f; // preload
-
 let johnTimer;
-// then = "loop" to keep looming afterwards, or "hide" to disappear afterwards
+// play one of John's animations; then = "loop" keeps looming, or a function to run when it ends
 function johnPlay(name, then) {
   clearTimeout(johnTimer);
-  const el = document.getElementById("john-img");
-  const a = JA[name];
+  const a = JOHN[name];
   let i = 0;
   const step = () => {
-    if (i >= a.frames.length) {
-      if (then === "hide") { document.getElementById("john").hidden = true; return; }
-      return johnPlay("loop", "loop");
-    }
-    el.src = a.frames[i];
+    if (i >= a.frames.length) return then === "loop" ? johnPlay("loop", "loop") : then();
+    $("john-img").src = a.frames[i];
     johnTimer = setTimeout(step, a.ms[i]);
     i++;
   };
   step();
 }
 
-let johnShown = false, firstMood = true;
-function johnMood(bad) {
-  const box = document.getElementById("john");
-  if (bad && !johnShown) {
-    box.hidden = false;
-    johnPlay(firstMood ? "loop" : "enter", "loop"); // no entrance on first page load
-  } else if (!bad && johnShown) {
-    johnPlay("leave", "hide");
-  } else if (!bad) {
-    box.hidden = true;
-  }
-  johnShown = bad;
-  firstMood = false;
+// ---------- moods and the camera ----------
+let mood = null, moving = false, token = 0;
+const putDownFirst = () => (holding ? ["putdown"] : []);
+
+function showScene(on) {
+  $("gez").hidden = on;
+  $("john-img").hidden = !on;
 }
 
-// every 20 seconds, if he's being good and just idling, he plays his console for a bit
+function changeMood(bad) {
+  const target = bad ? "bad" : "good";
+  if (mood === target) return;
+  const first = mood === null;
+  mood = target;
+  const my = ++token; // a newer mood change cancels anything still in progress
+
+  if (first) { // page load: no transitions
+    if (bad) { $("gez").classList.add("far"); showScene(true); johnPlay("loop", "loop"); }
+    else play([], "good");
+    return;
+  }
+
+  moving = true;
+  if (bad) {
+    // caught -> trembles -> camera pulls back -> John rises up
+    showScene(false);
+    $("gez").classList.remove("far");
+    play([...putDownFirst(), "caught", "bad"], "bad", () => {
+      if (my !== token) return;
+      $("gez").classList.add("far");
+      setTimeout(() => {
+        if (my !== token) return;
+        clearTimeout(gezTimer);
+        showScene(true);
+        johnPlay("enter", "loop");
+        moving = false;
+      }, 1000);
+    });
+  } else {
+    // John chases the money bag away -> camera pushes back in
+    johnPlay("leave", () => {
+      if (my !== token) return;
+      $("gez").classList.add("far");
+      showScene(false);
+      play([], "good");
+      requestAnimationFrame(() => requestAnimationFrame(() => $("gez").classList.remove("far")));
+      setTimeout(() => { if (my === token) moving = false; }, 1000);
+    });
+  }
+}
+
+function headpat() {
+  if (mood === "good" && !moving) play([...putDownFirst(), "pat"], "good");
+}
+
+// every 20 seconds, if he's being good and just standing there, he plays his console for a bit
 setInterval(() => {
-  if (mood === "good" && !busy) play(["pickup", "game", "game", "putdown"], "good");
+  if (mood === "good" && !busy && !moving) play(["pickup", "game", "game", "putdown"], "good");
 }, 20000);
 
 function setMood(bad) {
   isBad = bad;
-  const img = document.getElementById("gezine-img");
   changeMood(bad);
-  img.alt = bad ? "gezine looking guilty with a bag of money" : "gezine being a good boy";
-  johnMood(bad);
+  show("verdict", bad ? "No. He has been a bad boy." : "Yes. For now.");
+  show("bubble", bad ? BAD : GOOD);
   show("mood-btn", bad ? "Press F to pay respects to the exploits" : "Give gezine headpats");
-  for (const [node, text] of originals) node.nodeValue = text; // undo old uwu
-  originals.clear();
+  $("gezine-img").alt = bad ? "gezine looking guilty with a bag of money" : "gezine being a good boy";
   document.body.className = bad ? "bad" : "good";
-  document.title = bad ? "🚨 BAD BOY ALERT 🚨" : "Gezine Good Boy Twackew uwu";
-  if (bad) return;
-
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-    acceptNode: (n) => ["SCRIPT", "STYLE"].includes(n.parentNode.nodeName) || !n.nodeValue.trim()
-      ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
-  });
-  while (walker.nextNode()) {
-    originals.set(walker.currentNode, walker.currentNode.nodeValue);
-    walker.currentNode.nodeValue = uwu(walker.currentNode.nodeValue);
-  }
+  document.title = bad ? "BAD BOY ALERT" : "Gezine Good Boy Twackew uwu";
+  setUwu(!bad);
 }
 
+// ---------- data ----------
 async function check() {
   try {
     const data = await (await fetch(API_URL)).json();
@@ -264,41 +311,44 @@ async function check() {
     if (test === "good" || test === "bad") data.badBoy = test === "bad";
     if (test === "flip") data.badBoy = isBad; // keep whatever the flip timer last set
 
-    show("verdict", data.badBoy ? "NO. HE HAS BEEN A BAD BOY." : "Yes. For now.");
-    show("bubble", data.badBoy ? BAD : GOOD);
     show("count", data.nintendoCount);
     show("total", data.total);
     show("days", data.lastNintendoAt
       ? Math.floor((Date.now() - new Date(data.lastNintendoAt)) / 86400000)
       : "never");
 
-    const list = document.getElementById("reports");
-    list.innerHTML = "";
+    const body = $("reports");
+    body.innerHTML = "";
     for (const r of data.reports) {
-      const li = document.createElement("li");
-      const title = r.title || "Secret undisclosed report";
-      const company = r.company || "company hidden";
-      const date = r.activityAt ? new Date(r.activityAt).toLocaleDateString() : "unknown date";
-      if (r.url) {
-        const a = document.createElement("a");
-        a.href = r.url;
-        a.textContent = title;
-        li.append(a);
-      } else {
-        li.append(title);
-      }
-      li.append(" - " + company + " - " + (r.disclosed ? "disclosed" : "not disclosed") + " - " + date);
-      if (r.isNintendo) li.style.fontWeight = "bold";
-      list.append(li);
+      const tr = document.createElement("tr");
+      if (r.isNintendo) tr.className = "nintendo";
+      const cells = [
+        r.title || "Secret undisclosed report",
+        r.company || "hidden",
+        r.disclosed ? "disclosed" : "not disclosed",
+        r.activityAt ? new Date(r.activityAt).toLocaleDateString() : "unknown",
+      ];
+      cells.forEach((text, k) => {
+        const td = document.createElement("td");
+        if (k === 0 && r.url) {
+          const a = document.createElement("a");
+          a.href = r.url;
+          a.textContent = text;
+          td.append(a);
+        } else {
+          td.textContent = text;
+        }
+        tr.append(td);
+      });
+      body.append(tr);
     }
-    if (!data.reports.length) list.innerHTML = "<li>No reports found</li>";
+    if (!data.reports.length) body.innerHTML = '<tr><td colspan="4">No reports found</td></tr>';
 
     show("checked", "Last checked: " + new Date(data.checkedAt).toLocaleString());
     setMood(data.badBoy);
   } catch (e) {
-    show("verdict", "Couldn't check right now, try again later");
-    show("bubble", "...");
-    document.getElementById("reports").innerHTML = "<li>Couldn't load reports</li>";
+    show("verdict", "Couldn't check right now, try again later.");
+    $("reports").innerHTML = '<tr><td colspan="4">Couldn\'t load reports</td></tr>';
   }
 }
 
