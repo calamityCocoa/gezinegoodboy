@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gezine Good Boy Tracker</title>
+<style>
+  .gezine { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+  /* the reddit image has two drawings, this only shows the left one (gezine) */
+  .crop { width: 220px; height: 260px; overflow: hidden; border: 1px solid black; }
+  .crop img { width: 200%; height: 100%; object-fit: cover; object-position: left; }
+  .bubble { border: 2px solid black; border-radius: 15px; padding: 10px; max-width: 300px; }
+</style>
+</head>
+<body>
+
+<h1>Is gezine a good boy?</h1>
+<h2 id="verdict">Checking...</h2>
+
+<p>This silly little website tracks Gezine's hackerone account to make sure that he hasn't been naughty and earned money from John Nintendo.
+If he is caught earning money from John Nintendo then it will show on this page. Gezine will get a slap on the ass if he does anything like that as he has been a bad boy. A big ass whooping for him.</p>
+
+<div class="gezine">
+  <div class="crop"><img src="https://i.redd.it/6y45cc3ym8yh1.png" alt="gezine meme drawing" referrerpolicy="no-referrer"></div>
+  <div class="bubble" id="bubble">...</div>
+</div>
+
+<p>Reports to John Nintendo: <b id="count">?</b><br>
+Days since last report to John Nintendo: <b id="days">?</b><br>
+Total hackerone reports: <b id="total">?</b></p>
+
+<h3>His reports</h3>
+<ul id="reports"><li>Loading...</li></ul>
+<p><small id="checked"></small></p>
+
+<p>I just want to kiss you John Nintendo you are so sexy and strong and muscular with your awesome business practices, I like men</p>
+
+<p>This whole website is satire, it is all a big joke, don't take offense from the wording of this website and isn't exactly how I feel as the creator of this website I just want to put emphasis and over-exaggerate things</p>
+
+<script>
+// put your worker's address here, keep the /api on the end
+const API_URL = "https://YOUR-WORKER.workers.dev/api";
+
+const BAD = "I've been a bad boy!";
+const GOOD = "I'm living in a hut in the middle of nowhere and not helping the hacking community with their Switch 2 fun and i'm boring and sad and enabled emails so nintendo could DMCA me and stuff";
+
+function show(id, text) { document.getElementById(id).textContent = text; }
+
+async function check() {
+  try {
+    const data = await (await fetch(API_URL)).json();
+    if (data.error) throw new Error(data.error);
+
+    show("verdict", data.badBoy ? "NO. HE HAS BEEN A BAD BOY." : "Yes. For now.");
+    show("bubble", data.badBoy ? BAD : GOOD);
+    show("count", data.nintendoCount);
+    show("total", data.total);
+    show("days", data.lastNintendoAt
+      ? Math.floor((Date.now() - new Date(data.lastNintendoAt)) / 86400000)
+      : "never");
+
+    const list = document.getElementById("reports");
+    list.innerHTML = "";
+    for (const r of data.reports) {
+      const li = document.createElement("li");
+      const title = r.title || "Secret undisclosed report";
+      const company = r.company || "company hidden";
+      const date = r.activityAt ? new Date(r.activityAt).toLocaleDateString() : "unknown date";
+      if (r.url) {
+        const a = document.createElement("a");
+        a.href = r.url;
+        a.textContent = title;
+        li.append(a);
+      } else {
+        li.append(title);
+      }
+      li.append(" - " + company + " - " + (r.disclosed ? "disclosed" : "not disclosed") + " - " + date);
+      if (r.isNintendo) li.style.fontWeight = "bold";
+      list.append(li);
+    }
+    if (!data.reports.length) list.innerHTML = "<li>No reports found</li>";
+
+    show("checked", "Last checked: " + new Date(data.checkedAt).toLocaleString());
+  } catch (e) {
+    show("verdict", "Couldn't check right now, try again later");
+    show("bubble", "...");
+    document.getElementById("reports").innerHTML = "<li>Couldn't load reports</li>";
+  }
+}
+
+check();
+setInterval(check, 600000); // checks again every 10 minutes
+</script>
+
+</body>
+</html>
