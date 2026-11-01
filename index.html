@@ -35,6 +35,7 @@
 <body>
 
 <h1>Is gezine a good boy?</h1>
+<marquee>BREAKING NEWS: John Nintendo's lawyers have entered the chat &bull;&bull;&bull; ETA WEN? &bull;&bull;&bull; DO NOT UPDATE YOUR SWITCH 2 &bull;&bull;&bull; gezine has been spotted near a hut &bull;&bull;&bull; it's not a brick if you believe hard enough &bull;&bull;&bull; John Nintendo is watching &bull;&bull;&bull;</marquee>
 <h2 id="verdict">Checking...</h2>
 
 <p>This silly little website tracks Gezine's hackerone account to make sure that he hasn't been naughty and earned money from John Nintendo.
@@ -53,13 +54,22 @@ If he is caught earning money from John Nintendo then it will show on this page.
 Days since last report to John Nintendo: <b id="days">?</b><br>
 Total hackerone reports: <b id="total">?</b></p>
 
+<p><button id="mood-btn">...</button> <span id="mood-count"></span></p>
+<p><button id="eta-btn">ETA WEN?</button> <span id="eta"></span></p>
+
 <h3>His reports</h3>
 <ul id="reports"><li>Loading...</li></ul>
 <p><small id="checked"></small></p>
 
 <p>I just want to kiss you John Nintendo you are so sexy and strong and muscular with your awesome business practices, please take all of my money</p>
 
+<p><small>Gezine drawing from the <a href="https://www.reddit.com/r/switch2hacks/comments/1xhtmjt/two_sides/">"Two sides" post on r/switch2hacks</a>, all credit to the original artist.</small></p>
+
 <p><small>This whole website is satire. It's all a big joke, so don't take offence, everything is over-exaggerated on purpose.</small></p>
+
+<hr>
+<p><small>🚧 This website is under construction forever 🚧<br>
+You are visitor number <b>000069420</b></small></p>
 
 <script>
 // the backend lives in api/gezine.js on the same Vercel site
@@ -82,7 +92,25 @@ function uwu(t) {
     .replace(/([.!?])(\s|$)/g, (m, p, s) => p + " " + FACES[Math.floor(Math.random() * FACES.length)] + s);
 }
 
+// ETA WEN button
+const ETAS = [
+  "Soon™", "2 weeks", "When it's ready", "Every time you ask it gets delayed a week",
+  "When John Nintendo stops watching", "gezine is busy in his hut, try again later",
+  "After the next firmware update patches it", "Never. Go outside.",
+];
+document.getElementById("eta-btn").onclick = () =>
+  show("eta", ETAS[Math.floor(Math.random() * ETAS.length)]);
+
+// headpats when he's good, press F when he's bad
+let isBad = false, pats = 0, fs = 0;
+document.getElementById("mood-btn").onclick = () => {
+  if (isBad) show("mood-count", "F".repeat(Math.min(++fs, 50)) + " (" + fs + " respects paid to the exploits)");
+  else show("mood-count", "headpats given: " + ++pats + " " + "♡".repeat(Math.min(pats, 20)));
+};
+
 function setMood(bad) {
+  isBad = bad;
+  show("mood-btn", bad ? "Press F to pay respects to the exploits" : "Give gezine headpats");
   for (const [node, text] of originals) node.nodeValue = text; // undo old uwu
   originals.clear();
   document.body.className = bad ? "bad" : "good";
