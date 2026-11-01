@@ -43,7 +43,7 @@ If he is caught earning money from John Nintendo then it will show on this page.
 Days since last report to John Nintendo: <b id="days">?</b><br>
 Total hackerone reports: <b id="total">?</b></p>
 
-<p id="john" hidden><img src="images/john-nintendo.png" alt="John Nintendo coming for gezine" width="350" style="max-width:100%;height:auto"><br>
+<p id="john" hidden><img id="john-img" src="images/john/0.png" alt="John Nintendo coming for gezine" width="350" style="max-width:100%;height:auto"><br>
 <b>uh oh. John Nintendo has come to collect.</b></p>
 
 <p><button id="mood-btn">...</button> <span id="mood-count"></span></p>
@@ -133,6 +133,16 @@ function playAnim(name, once) {
   };
   step();
 }
+
+// John Nintendo loops on his own (only visible when gezine is bad)
+const JOHN = { frames: [0, 1, 2, 3].map((n) => "images/john/" + n + ".png"), ms: [550, 350, 650, 300] };
+JOHN.frames.forEach((f) => { new Image().src = f; });
+let johnFrame = 0;
+(function johnStep() {
+  document.getElementById("john-img").src = JOHN.frames[johnFrame];
+  setTimeout(johnStep, JOHN.ms[johnFrame]);
+  johnFrame = (johnFrame + 1) % JOHN.frames.length;
+})();
 
 // every 20 seconds, if he's being good and just idling, he plays his console for a bit
 setInterval(() => {
