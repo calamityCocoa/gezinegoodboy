@@ -6,7 +6,7 @@
 <title>Gezine Good Boy Tracker</title>
 <style>
   .gezine { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
-  #gezine-img { display: block; max-width: 100%; height: auto; }
+  #gezine-img { display: block; height: 300px; width: auto; max-width: 100%; object-fit: contain; }
   .bubble { border: 2px solid black; border-radius: 15px; padding: 10px; max-width: 300px; }
 
   .frame { position: relative; }
@@ -33,7 +33,7 @@ If he is caught earning money from John Nintendo then it will show on this page.
 
 <div class="gezine">
   <div class="frame">
-    <img id="gezine-img" src="images/good/0.png" alt="gezine being a good boy" width="260">
+    <img id="gezine-img" src="images/good/0.png" alt="gezine being a good boy">
     <div class="stamp">WANTED</div>
   </div>
   <div class="bubble" id="bubble">...</div>
@@ -97,28 +97,37 @@ document.getElementById("eta-btn").onclick = () =>
 let isBad = false, pats = 0, fs = 0;
 document.getElementById("mood-btn").onclick = () => {
   if (isBad) show("mood-count", "F".repeat(Math.min(++fs, 50)) + " (" + fs + " respects paid to the exploits)");
-  else show("mood-count", "headpats given: " + ++pats + " " + "♡".repeat(Math.min(pats, 20)));
+  else {
+    show("mood-count", "headpats given: " + ++pats + " " + "♡".repeat(Math.min(pats, 20)));
+    playAnim("pat", true);
+  }
 };
 
 // hand-drawn style animations: each one is a list of frames and how long each frame shows (ms)
 const ANIMS = {
   good: { frames: ["images/good/0.png", "images/good/1.png", "images/good/2.png", "images/good/3.png"], ms: [700, 350, 140, 450] },
+  pat:  { frames: ["images/pat/0.png", "images/pat/1.png", "images/pat/2.png", "images/pat/3.png"], ms: [220, 260, 380, 600] },
   bad:  { frames: ["images/bad/0.png", "images/bad/1.png", "images/bad/2.png", "images/bad/3.png"], ms: [450, 180, 380, 220] },
 };
 for (const a of Object.values(ANIMS)) for (const f of a.frames) new Image().src = f; // preload frames
 
 let animTimer, animName;
-function playAnim(name) {
-  if (animName === name) return;
+// once = play it a single time, then go back to the idle loop for his current mood
+function playAnim(name, once) {
+  if (animName === name && !once) return;
   animName = name;
   clearTimeout(animTimer);
   const img = document.getElementById("gezine-img");
   let i = 0;
   const step = () => {
     const a = ANIMS[name];
+    if (once && i >= a.frames.length) {
+      animName = null;
+      return playAnim(isBad ? "bad" : "good");
+    }
     img.src = a.frames[i];
     animTimer = setTimeout(step, a.ms[i]);
-    i = (i + 1) % a.frames.length;
+    i = once ? i + 1 : (i + 1) % a.frames.length;
   };
   step();
 }
