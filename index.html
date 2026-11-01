@@ -16,7 +16,9 @@
   h1 { font-size: 2em; line-height: 1.2; margin: 16px 0 4px; }
   h2 { font-size: 1.25em; margin: 32px 0 8px; }
   marquee { font-size: .9em; }
-  .verdict { font-size: 1.4em; font-weight: bold; margin: 8px 0 20px; }
+  .verdict { font-size: 1.4em; font-weight: bold; margin: 8px 0 4px; }
+  .toggle { margin: 0 0 20px; font-size: .9em; }
+  .toggle input { margin: 0 4px 0 0; vertical-align: middle; }
   small { color: #555; }
 
   /* the drawing on the left, his speech bubble on the right */
@@ -65,6 +67,7 @@
 <h1>Is gezine a good boy?</h1>
 <marquee>BREAKING NEWS: John Nintendo's lawyers have entered the chat &bull;&bull;&bull; ETA WEN? &bull;&bull;&bull; DO NOT UPDATE YOUR SWITCH 2 &bull;&bull;&bull; gezine has been spotted near a hut &bull;&bull;&bull; it's not a brick if you believe hard enough &bull;&bull;&bull; John Nintendo is watching &bull;&bull;&bull;</marquee>
 <p class="verdict" id="verdict">Checking...</p>
+<p class="toggle"><label><input type="checkbox" id="uwu-toggle"> uwu mode</label></p>
 
 <div class="hero">
   <div id="stage">
@@ -113,7 +116,21 @@ const GOOD = "I'm living in a hut in the middle of nowhere and not helping the h
 const $ = (id) => document.getElementById(id);
 function show(id, text) { $(id).textContent = text; }
 
-// ---------- uwu mode (when he's good) ----------
+// ---------- uwu mode (off by default, the checkbox turns it on) ----------
+let uwuOn = false;
+try { uwuOn = localStorage.getItem("uwu") === "on"; } catch (e) {}
+$("uwu-toggle").checked = uwuOn;
+$("uwu-toggle").onchange = () => {
+  uwuOn = $("uwu-toggle").checked;
+  try { localStorage.setItem("uwu", uwuOn ? "on" : "off"); } catch (e) {}
+  setUwu(uwuOn);
+  setTitle();
+};
+
+function setTitle() {
+  document.title = uwuOn ? "Gezine Good Boy Twackew uwu" : isBad ? "BAD BOY ALERT" : "Gezine Good Boy Tracker";
+}
+
 const FACES = ["uwu", "owo", ">w<", "^w^", ":3", "nya~"];
 const originals = new Map();
 
@@ -296,8 +313,8 @@ function setMood(bad) {
   show("mood-btn", bad ? "Press F to pay respects to the exploits" : "Give gezine headpats");
   $("gezine-img").alt = bad ? "gezine looking guilty with a bag of money" : "gezine being a good boy";
   document.body.className = bad ? "bad" : "good";
-  document.title = bad ? "BAD BOY ALERT" : "Gezine Good Boy Twackew uwu";
-  setUwu(!bad);
+  setTitle();
+  setUwu(uwuOn);
 }
 
 // ---------- data ----------
