@@ -94,6 +94,7 @@ If he is caught earning money from John Nintendo then it will show on this page.
 <div class="buttons">
   <p><button id="mood-btn">...</button> <span id="mood-count"></span></p>
   <p><button id="eta-btn">ETA WEN?</button> <span id="eta"></span></p>
+  <p id="global" hidden>Everyone so far: <b id="g-pats">0</b> headpats and <b id="g-fs">0</b> respects paid.</p>
 </div>
 
 <h2>His reports</h2>
@@ -182,11 +183,62 @@ let isBad = false, pats = 0, fs = 0;
 $("mood-btn").onclick = () => {
   if (isBad) {
     show("mood-count", "F".repeat(Math.min(++fs, 40)) + " (" + fs + " respects paid to the exploits)");
+    pending.respect++;
   } else {
     show("mood-count", "headpats given: " + ++pats);
+    pending.headpat++;
     headpat();
   }
+  showGlobal();
 };
+
+// ---------- global counters (shared by everyone, stored by api/counts.js) ----------
+// Clicks are saved up and sent every 2 seconds, so spamming the button is one request, not hundreds.
+const pending = { headpat: 0, respect: 0 };
+let globalTotals = null;
+
+function showGlobal() {
+  if (!globalTotals) return;
+  $("global").hidden = false;
+  show("g-pats", (globalTotals.headpats + pending.headpat).toLocaleString());
+  show("g-fs", (globalTotals.respects + pending.respect).toLocaleString());
+}
+
+async function loadGlobal() {
+  try {
+    const res = await fetch("/api/counts");
+    if (!res.ok) return; // database not connected yet: the line just stays hidden
+    globalTotals = await res.json();
+    showGlobal();
+  } catch (e) {}
+}
+
+async function sendClicks() {
+  for (const type of ["headpat", "respect"]) {
+    const n = Math.min(pending[type], 25);
+    if (!n) continue;
+    pending[type] -= n;
+    try {
+      const res = await fetch(`/api/counts?type=${type}&n=${n}`, { method: "POST" });
+      const body = await res.json();
+      if (body.headpats !== undefined) globalTotals = body;
+    } catch (e) {}
+  }
+  showGlobal();
+}
+
+// send any last clicks if the visitor leaves the page
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "hidden") return;
+  for (const type of ["headpat", "respect"]) {
+    const n = Math.min(pending[type], 25);
+    if (n && navigator.sendBeacon(`/api/counts?type=${type}&n=${n}`)) pending[type] -= n;
+  }
+});
+
+loadGlobal();
+setInterval(sendClicks, 2000);
+setInterval(loadGlobal, 30000);
 
 // ---------- gezine's animations ----------
 // Every animation starts and ends on the neutral pose (or a matching transition),
