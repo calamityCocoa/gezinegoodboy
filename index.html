@@ -115,43 +115,73 @@ document.getElementById("mood-btn").onclick = () => {
   if (isBad) show("mood-count", "F".repeat(Math.min(++fs, 50)) + " (" + fs + " respects paid to the exploits)");
   else {
     show("mood-count", "headpats given: " + ++pats + " " + "♡".repeat(Math.min(pats, 20)));
-    playAnim("pat", true);
+    headpat();
   }
 };
 
-// hand-drawn style animations: each one is a list of frames and how long each frame shows (ms)
+// ---------- animations ----------
+// Every animation starts and ends on the neutral pose (or a matching transition),
+// so the director below can chain any of them without a jump.
+const frames = (dir) => [0, 1, 2, 3].map((n) => "images/" + dir + "/" + n + ".png");
 const ANIMS = {
-  good: { frames: ["images/good/0.png", "images/good/1.png", "images/good/2.png", "images/good/3.png"], ms: [700, 350, 140, 450] },
-  pat:  { frames: ["images/pat/0.png", "images/pat/1.png", "images/pat/2.png", "images/pat/3.png"], ms: [220, 260, 380, 600] },
-  // gaming plays through twice each time it's picked up
-  game: { frames: [0, 1, 2, 3, 0, 1, 2, 3].map((n) => "images/game/" + n + ".png"), ms: [450, 200, 350, 650, 350, 200, 350, 900] },
-  bad:  { frames: ["images/bad/0.png", "images/bad/1.png", "images/bad/2.png", "images/bad/3.png"], ms: [450, 180, 380, 220] },
+  good:   { frames: frames("good"),   ms: [700, 350, 140, 450] },
+  bad:    { frames: frames("bad"),    ms: [450, 180, 380, 220] },
+  pat:    { frames: frames("pat"),    ms: [220, 260, 380, 600], cls: "patting" },
+  game:   { frames: frames("game"),   ms: [450, 200, 350, 650], cls: "gaming" },
+  pickup: { frames: frames("pickup"), ms: [250, 300, 300, 250], holds: true },
+  caught: { frames: frames("caught"), ms: [200, 550, 350, 300] },
+  relief: { frames: frames("relief"), ms: [300, 380, 650, 300] },
 };
-for (const a of Object.values(ANIMS)) for (const f of a.frames) new Image().src = f; // preload frames
+// putting the console down = picking it up backwards
+ANIMS.putdown = { frames: [...ANIMS.pickup.frames].reverse(), ms: [...ANIMS.pickup.ms].reverse(), drops: true };
+for (const a of Object.values(ANIMS)) for (const f of a.frames) new Image().src = f; // preload
 
-let animTimer, animName;
-// once = play it a single time, then go back to the idle loop for his current mood
-function playAnim(name, once) {
-  if (animName === name && !once) return;
-  animName = name;
+let animTimer, busy = false, holding = false, mood = null;
+
+// play each step once, in order, then loop `loop` forever
+function play(steps, loop) {
   clearTimeout(animTimer);
   const img = document.getElementById("gezine-img");
-  img.classList.remove("patting", "gaming");
-  void img.offsetWidth; // restarts the squish if headpats are spammed
-  if (name === "pat") img.classList.add("patting");
-  if (name === "game") img.classList.add("gaming");
-  let i = 0;
+  const seq = steps.map((n) => ANIMS[n]);
+  let s = 0, i = 0;
+  busy = seq.length > 0;
+
+  const begin = (a) => {
+    img.classList.remove("patting", "gaming");
+    void img.offsetWidth; // restarts the squish if headpats are spammed
+    if (a.cls) img.classList.add(a.cls);
+    if (a.holds) holding = true;
+  };
+  begin(seq[0] || ANIMS[loop]);
+
   const step = () => {
-    const a = ANIMS[name];
-    if (once && i >= a.frames.length) {
-      animName = null;
-      return playAnim(isBad ? "bad" : "good");
+    while (s < seq.length && i >= seq[s].frames.length) { // finished a step, move to the next
+      if (seq[s].drops) holding = false;
+      s++; i = 0;
+      begin(seq[s] || ANIMS[loop]);
     }
+    if (s >= seq.length) busy = false;
+    const a = seq[s] || ANIMS[loop];
+    if (i >= a.frames.length) i = 0; // looping
     img.src = a.frames[i];
     animTimer = setTimeout(step, a.ms[i]);
-    i = once ? i + 1 : (i + 1) % a.frames.length;
+    i++;
   };
   step();
+}
+
+const putDownFirst = () => (holding ? ["putdown"] : []);
+
+function changeMood(bad) {
+  const target = bad ? "bad" : "good";
+  if (mood === target) return;
+  if (mood === null) play([], target); // first load: no transition
+  else play([...putDownFirst(), bad ? "caught" : "relief"], target);
+  mood = target;
+}
+
+function headpat() {
+  if (mood === "good") play([...putDownFirst(), "pat"], "good");
 }
 
 // John Nintendo loops on his own (only visible when gezine is bad)
@@ -166,13 +196,13 @@ let johnFrame = 0;
 
 // every 20 seconds, if he's being good and just idling, he plays his console for a bit
 setInterval(() => {
-  if (!isBad && animName === "good") playAnim("game", true);
+  if (mood === "good" && !busy) play(["pickup", "game", "game", "putdown"], "good");
 }, 20000);
 
 function setMood(bad) {
   isBad = bad;
   const img = document.getElementById("gezine-img");
-  playAnim(bad ? "bad" : "good");
+  changeMood(bad);
   img.alt = bad ? "gezine looking guilty with a bag of money" : "gezine being a good boy";
   document.getElementById("john").hidden = !bad;
   show("mood-btn", bad ? "Press F to pay respects to the exploits" : "Give gezine headpats");
@@ -199,7 +229,8 @@ async function check() {
 
     // add ?test=good or ?test=bad to the address to preview each mood
     const test = new URLSearchParams(location.search).get("test");
-    if (test) data.badBoy = test === "bad";
+    if (test === "good" || test === "bad") data.badBoy = test === "bad";
+    if (test === "flip") data.badBoy = isBad; // keep whatever the flip timer last set
 
     show("verdict", data.badBoy ? "NO. HE HAS BEEN A BAD BOY." : "Yes. For now.");
     show("bubble", data.badBoy ? BAD : GOOD);
@@ -241,6 +272,11 @@ async function check() {
 
 check();
 setInterval(check, 600000); // checks again every 10 minutes
+
+// ?test=flip swaps between good and bad every 10 seconds, to check the transitions
+if (new URLSearchParams(location.search).get("test") === "flip") {
+  setInterval(() => setMood(!isBad), 10000);
+}
 </script>
 
 </body>
