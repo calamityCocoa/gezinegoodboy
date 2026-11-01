@@ -107,6 +107,8 @@ document.getElementById("mood-btn").onclick = () => {
 const ANIMS = {
   good: { frames: ["images/good/0.png", "images/good/1.png", "images/good/2.png", "images/good/3.png"], ms: [700, 350, 140, 450] },
   pat:  { frames: ["images/pat/0.png", "images/pat/1.png", "images/pat/2.png", "images/pat/3.png"], ms: [220, 260, 380, 600] },
+  // gaming plays through twice each time it's picked up
+  game: { frames: [0, 1, 2, 3, 0, 1, 2, 3].map((n) => "images/game/" + n + ".png"), ms: [450, 200, 350, 650, 350, 200, 350, 900] },
   bad:  { frames: ["images/bad/0.png", "images/bad/1.png", "images/bad/2.png", "images/bad/3.png"], ms: [450, 180, 380, 220] },
 };
 for (const a of Object.values(ANIMS)) for (const f of a.frames) new Image().src = f; // preload frames
@@ -131,6 +133,11 @@ function playAnim(name, once) {
   };
   step();
 }
+
+// every 20 seconds, if he's being good and just idling, he plays his console for a bit
+setInterval(() => {
+  if (!isBad && animName === "good") playAnim("game", true);
+}, 20000);
 
 function setMood(bad) {
   isBad = bad;
