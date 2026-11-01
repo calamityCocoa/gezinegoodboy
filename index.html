@@ -6,20 +6,10 @@
 <title>Gezine Good Boy Tracker</title>
 <style>
   .gezine { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
-  /* the reddit image has two drawings, this only shows the left one (gezine) */
-  .crop { width: 220px; height: 260px; overflow: hidden; border: 1px solid black; }
-  .crop img { width: 200%; height: 100%; object-fit: cover; object-position: left; }
+  #gezine-img { display: block; max-width: 100%; height: auto; }
   .bubble { border: 2px solid black; border-radius: 15px; padding: 10px; max-width: 300px; }
 
-  /* good boy: cat ears */
-  .frame { position: relative; margin-top: 45px; }
-  .ear { display: none; position: absolute; top: -40px; width: 60px; height: 50px; background: black;
-         clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-  .ear::after { content: ""; position: absolute; inset: 16px 15px 0 15px; background: pink;
-                clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-  .ear.left { left: 30px; transform: rotate(-15deg); }
-  .ear.right { right: 30px; transform: rotate(15deg); }
-  body.good .ear { display: block; }
+  .frame { position: relative; }
 
   /* bad boy: flashing page, shaking drawing, WANTED stamp */
   .stamp { display: none; position: absolute; top: 40%; left: -10px; right: -10px; text-align: center;
@@ -27,7 +17,7 @@
            font: bold 30px Impact, "Arial Black", sans-serif; transform: rotate(-20deg); }
   body.bad .stamp { display: block; }
   body.bad { animation: flash 1s steps(1) infinite; }
-  body.bad .crop { animation: shake .25s infinite; }
+  body.bad #gezine-img { animation: shake .25s infinite; }
   @keyframes flash { 50% { background: #ffd0d0; } }
   @keyframes shake { 25% { transform: translate(-4px, 2px); } 75% { transform: translate(4px, -2px); } }
 </style>
@@ -43,8 +33,7 @@ If he is caught earning money from John Nintendo then it will show on this page.
 
 <div class="gezine">
   <div class="frame">
-    <div class="ear left"></div><div class="ear right"></div>
-    <div class="crop"><img src="https://i.redd.it/6y45cc3ym8yh1.png" alt="gezine meme drawing" referrerpolicy="no-referrer"></div>
+    <img id="gezine-img" src="images/good.png" alt="gezine being a good boy" width="260">
     <div class="stamp">WANTED</div>
   </div>
   <div class="bubble" id="bubble">...</div>
@@ -53,6 +42,9 @@ If he is caught earning money from John Nintendo then it will show on this page.
 <p>Reports to John Nintendo: <b id="count">?</b><br>
 Days since last report to John Nintendo: <b id="days">?</b><br>
 Total hackerone reports: <b id="total">?</b></p>
+
+<p id="john" hidden><img src="images/john-nintendo.png" alt="John Nintendo coming for gezine" width="350" style="max-width:100%;height:auto"><br>
+<b>uh oh. John Nintendo has come to collect.</b></p>
 
 <p><button id="mood-btn">...</button> <span id="mood-count"></span></p>
 <p><button id="eta-btn">ETA WEN?</button> <span id="eta"></span></p>
@@ -63,7 +55,7 @@ Total hackerone reports: <b id="total">?</b></p>
 
 <p>I just want to kiss you John Nintendo you are so sexy and strong and muscular with your awesome business practices, please take all of my money</p>
 
-<p><small>Gezine drawing from the <a href="https://www.reddit.com/r/switch2hacks/comments/1xhtmjt/two_sides/">"Two sides" post on r/switch2hacks</a>, all credit to the original artist.</small></p>
+<p><small>Gezine drawings based on the original from the <a href="https://www.reddit.com/r/switch2hacks/comments/1xhtmjt/two_sides/">"Two sides" post on r/switch2hacks</a>, all credit to the original artist.</small></p>
 
 <p><small>This whole website is satire. It's all a big joke, so don't take offence, everything is over-exaggerated on purpose.</small></p>
 
@@ -110,6 +102,10 @@ document.getElementById("mood-btn").onclick = () => {
 
 function setMood(bad) {
   isBad = bad;
+  const img = document.getElementById("gezine-img");
+  img.src = bad ? "images/bad.png" : "images/good.png";
+  img.alt = bad ? "gezine looking guilty with a bag of money" : "gezine being a good boy";
+  document.getElementById("john").hidden = !bad;
   show("mood-btn", bad ? "Press F to pay respects to the exploits" : "Give gezine headpats");
   for (const [node, text] of originals) node.nodeValue = text; // undo old uwu
   originals.clear();
