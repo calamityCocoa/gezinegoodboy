@@ -10,6 +10,26 @@
   .crop { width: 220px; height: 260px; overflow: hidden; border: 1px solid black; }
   .crop img { width: 200%; height: 100%; object-fit: cover; object-position: left; }
   .bubble { border: 2px solid black; border-radius: 15px; padding: 10px; max-width: 300px; }
+
+  /* good boy: cat ears */
+  .frame { position: relative; margin-top: 45px; }
+  .ear { display: none; position: absolute; top: -40px; width: 60px; height: 50px; background: black;
+         clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+  .ear::after { content: ""; position: absolute; inset: 16px 15px 0 15px; background: pink;
+                clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+  .ear.left { left: 30px; transform: rotate(-15deg); }
+  .ear.right { right: 30px; transform: rotate(15deg); }
+  body.good .ear { display: block; }
+
+  /* bad boy: flashing page, shaking drawing, WANTED stamp */
+  .stamp { display: none; position: absolute; top: 40%; left: -10px; right: -10px; text-align: center;
+           color: red; border: 4px solid red; background: rgba(255,255,255,.75);
+           font: bold 30px Impact, "Arial Black", sans-serif; transform: rotate(-20deg); }
+  body.bad .stamp { display: block; }
+  body.bad { animation: flash 1s steps(1) infinite; }
+  body.bad .crop { animation: shake .25s infinite; }
+  @keyframes flash { 50% { background: #ffd0d0; } }
+  @keyframes shake { 25% { transform: translate(-4px, 2px); } 75% { transform: translate(4px, -2px); } }
 </style>
 </head>
 <body>
@@ -21,7 +41,11 @@
 If he is caught earning money from John Nintendo then it will show on this page. Gezine will get a slap on the ass if he does anything like that as he has been a bad boy. A big ass whooping for him.</p>
 
 <div class="gezine">
-  <div class="crop"><img src="https://i.redd.it/6y45cc3ym8yh1.png" alt="gezine meme drawing" referrerpolicy="no-referrer"></div>
+  <div class="frame">
+    <div class="ear left"></div><div class="ear right"></div>
+    <div class="crop"><img src="https://i.redd.it/6y45cc3ym8yh1.png" alt="gezine meme drawing" referrerpolicy="no-referrer"></div>
+    <div class="stamp">WANTED</div>
+  </div>
   <div class="bubble" id="bubble">...</div>
 </div>
 
@@ -46,10 +70,43 @@ const GOOD = "I'm living in a hut in the middle of nowhere and not helping the h
 
 function show(id, text) { document.getElementById(id).textContent = text; }
 
+// uwuify every bit of text on the page (and undo it if he turns bad)
+const FACES = ["uwu", "owo", ">w<", "^w^", ":3", "nya~", "(˶ᵔ ᵕ ᵔ˶)"];
+const originals = new Map();
+
+function uwu(t) {
+  return t
+    .replace(/[rl]/g, "w").replace(/[RL]/g, "W")
+    .replace(/n([aeiou])/g, "ny$1").replace(/N([aeiouAEIOU])/g, "Ny$1")
+    .replace(/ove/g, "uv")
+    .replace(/([.!?])(\s|$)/g, (m, p, s) => p + " " + FACES[Math.floor(Math.random() * FACES.length)] + s);
+}
+
+function setMood(bad) {
+  for (const [node, text] of originals) node.nodeValue = text; // undo old uwu
+  originals.clear();
+  document.body.className = bad ? "bad" : "good";
+  document.title = bad ? "🚨 BAD BOY ALERT 🚨" : "Gezine Good Boy Twackew uwu";
+  if (bad) return;
+
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+    acceptNode: (n) => ["SCRIPT", "STYLE"].includes(n.parentNode.nodeName) || !n.nodeValue.trim()
+      ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
+  });
+  while (walker.nextNode()) {
+    originals.set(walker.currentNode, walker.currentNode.nodeValue);
+    walker.currentNode.nodeValue = uwu(walker.currentNode.nodeValue);
+  }
+}
+
 async function check() {
   try {
     const data = await (await fetch(API_URL)).json();
     if (data.error) throw new Error(data.error);
+
+    // add ?test=good or ?test=bad to the address to preview each mood
+    const test = new URLSearchParams(location.search).get("test");
+    if (test) data.badBoy = test === "bad";
 
     show("verdict", data.badBoy ? "NO. HE HAS BEEN A BAD BOY." : "Yes. For now.");
     show("bubble", data.badBoy ? BAD : GOOD);
@@ -81,6 +138,7 @@ async function check() {
     if (!data.reports.length) list.innerHTML = "<li>No reports found</li>";
 
     show("checked", "Last checked: " + new Date(data.checkedAt).toLocaleString());
+    setMood(data.badBoy);
   } catch (e) {
     show("verdict", "Couldn't check right now, try again later");
     show("bubble", "...");
