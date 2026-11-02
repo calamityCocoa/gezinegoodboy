@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Gezine Good Boy Tracker</title>
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="favicon.png">
@@ -10,16 +10,28 @@
 <!-- link previews (Discord, Twitter, iMessage, etc.) -->
 <meta name="description" content="Tracking gezine's HackerOne to make sure he hasn't been naughty and earned money from John Nintendo. Now with 31 minutes of bootstrap.bas ASMR.">
 <meta name="theme-color" content="#c2185b">
-<meta property="og:type" content="website">
+<meta property="og:type" content="video.other">
 <meta property="og:site_name" content="Gezine Good Boy Tracker">
 <meta property="og:url" content="https://gezinegoodboy.vercel.app/">
 <meta property="og:title" content="Is gezine a good boy?">
 <meta property="og:description" content="Tracking gezine's HackerOne to make sure he hasn't been naughty and earned money from John Nintendo. Now with 31 minutes of bootstrap.bas ASMR.">
-<meta property="og:image" content="https://gezinegoodboy.vercel.app/images/og.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="gezine looking innocent next to the words: Is gezine a good boy?">
-<meta name="twitter:card" content="summary_large_image">
+<meta property="og:image" content="https://gezinegoodboy.vercel.app/images/asmr-poster.jpg">
+<meta property="og:image:width" content="720">
+<meta property="og:image:height" content="720">
+<meta property="og:image:alt" content="gezine whispering into a microphone in front of a spinning record">
+<!-- the playable video Discord shows; it must be a real video/mp4 file, so it's served from GitHub Pages -->
+<meta property="og:video" content="https://calamitycocoa.github.io/gezinegoodboy-media/asmr.mp4">
+<meta property="og:video:url" content="https://calamitycocoa.github.io/gezinegoodboy-media/asmr.mp4">
+<meta property="og:video:secure_url" content="https://calamitycocoa.github.io/gezinegoodboy-media/asmr.mp4">
+<meta property="og:video:type" content="video/mp4">
+<meta property="og:video:width" content="720">
+<meta property="og:video:height" content="720">
+<meta name="twitter:card" content="player">
+<meta name="twitter:image" content="https://gezinegoodboy.vercel.app/images/og.png">
+<meta name="twitter:player:stream" content="https://calamitycocoa.github.io/gezinegoodboy-media/asmr.mp4">
+<meta name="twitter:player:stream:content_type" content="video/mp4">
+<meta name="twitter:player:width" content="720">
+<meta name="twitter:player:height" content="720">
 <style>
   body {
     max-width: 680px;
@@ -27,7 +39,9 @@
     padding: 16px;
     font: 17px/1.5 Georgia, "Times New Roman", serif;
     color: #111;
-    background: #fff;
+    background: rgba(255, 255, 255, .86);
+    min-height: 100vh;
+    box-sizing: border-box;
   }
   h1 { font-size: 2em; line-height: 1.2; margin: 16px 0 4px; }
   h2 { font-size: 1.25em; margin: 32px 0 8px; }
@@ -42,7 +56,7 @@
   .bubble { flex: 1 1 200px; border: 1px solid #111; border-radius: 12px; padding: 10px 14px; margin: 0; }
 
   /* square stage: gezine close up, or zoomed out with John Nintendo */
-  #stage { position: relative; width: 320px; max-width: 100%; aspect-ratio: 1; overflow: hidden; border: 1px solid #111; }
+  #stage { position: relative; width: 320px; max-width: 100%; aspect-ratio: 1; overflow: hidden; border: 1px solid #111; background: #fff; }
   #gez {
     position: absolute; left: 6.19%; bottom: 2%; width: 87.62%; aspect-ratio: 400 / 420;
     transform-origin: 44.12% 98.1%;              /* her feet */
@@ -78,13 +92,34 @@
   .credits li { margin: 4px 0; }
   footer { margin-top: 40px; border-top: 1px solid #ccc; padding-top: 8px; }
   footer p { margin: 4px 0; }
-  /* YouTube first; our own copy takes over if YouTube won't play */
-  #asmr-yt { width: 100%; aspect-ratio: 16 / 9; border: 1px solid #111; background: #000; }
-  #asmr-yt iframe { display: block; width: 100%; height: 100%; border: 0; }
-  #asmr-video { display: block; width: 100%; max-width: 480px; aspect-ratio: 1; border: 1px solid #111; background: #fff; }
+
+  /* the ASMR plays behind everything; the page is a see-through panel on top */
+  html { background: #fff; }
+  #bg { position: fixed; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: contain; background: #fff; }
+  #sound-btn {
+    position: fixed; z-index: 10; padding: 8px 14px; min-height: 44px; color: #111; font: inherit; font-size: .9em;
+    right: calc(16px + env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom));
+    background: #fff; border: 1px solid #111; border-radius: 999px; box-shadow: 0 2px 8px rgba(0, 0, 0, .15); cursor: pointer;
+  }
+  /* phones and tablets */
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right));
+         padding-bottom: calc(80px + env(safe-area-inset-bottom)); overflow-wrap: break-word; }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  @media (pointer: coarse) { button { min-height: 44px; padding: 6px 14px; } }
+  /* wide screens: page on the left, gezine in full view on the right */
+  @media (min-width: 1100px) {
+    body { margin: 0 0 0 4vw; border-left: 1px solid #ddd; border-right: 1px solid #ddd; }
+    #bg { object-position: right center; }
+  }
 </style>
 </head>
 <body>
+<video id="bg" autoplay muted loop playsinline preload="auto" poster="images/asmr-poster.jpg" aria-hidden="true">
+  <source src="https://calamitycocoa.github.io/gezinegoodboy-media/asmr.mp4" type="video/mp4">
+  <source src="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/bootstrap-asmr.mp4" type="video/mp4">
+</video>
+<button id="sound-btn" type="button">🔇 Sound on</button>
 
 <h1>Is gezine a good boy?</h1>
 <marquee>BREAKING NEWS: John Nintendo's lawyers have entered the chat &bull;&bull;&bull; ETA WEN? &bull;&bull;&bull; DO NOT UPDATE YOUR SWITCH 2 &bull;&bull;&bull; gezine has been spotted near a hut &bull;&bull;&bull; it's not a brick if you believe hard enough &bull;&bull;&bull; John Nintendo is watching &bull;&bull;&bull;</marquee>
@@ -111,61 +146,24 @@ If he is caught earning money from John Nintendo then it will show on this page.
 <div class="buttons">
   <p><button id="mood-btn">...</button> <span id="mood-count"></span></p>
   <p><button id="eta-btn">ETA WEN?</button> <span id="eta"></span></p>
+  <p id="game-row" hidden><button id="game-btn">🎧 Play gezine's headset game</button></p>
   <p id="global" hidden>Everyone so far: <b id="g-pats">0</b> headpats and <b id="g-fs">0</b> respects paid.</p>
 </div>
 
 <h2>His reports</h2>
-<table id="reports-table">
+<div class="table-scroll"><table id="reports-table">
   <thead><tr><th>Report</th><th>Company</th><th>Status</th><th>Date</th></tr></thead>
   <tbody id="reports"><tr><td colspan="4">Loading...</td></tr></tbody>
-</table>
+</table></div>
 <p><small id="checked"></small></p>
 
 <h2>gezine's bootstrap.bas ASMR</h2>
-<div id="asmr-yt"><div id="asmr-yt-player"></div></div>
-<video id="asmr-video" controls preload="none" playsinline poster="images/asmr-poster.jpg" hidden>
-  <source src="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/bootstrap-asmr.mp4" type="video/mp4">
-</video>
-<p>31 minutes of gezine whispering a SmileBASIC 4 bootstrap.bas into a microphone. Headphones recommended.
-Also on <a href="https://youtu.be/_kSztm_dDDk">YouTube</a>.</p>
-<p><small>YouTube not playing? <a href="#asmr-yt" id="asmr-own">Play our copy instead</a>,
-or download it: <a href="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/bootstrap-asmr.mp4">smaller (101 MB)</a> /
-<a href="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/bootstrap-asmr-full.mp4">full quality (253 MB)</a>.</small></p>
+<p>That's gezine in the background, whispering a SmileBASIC 4 bootstrap.bas into a microphone for 31 minutes.
+Headphones recommended. Use the sound button in the corner to turn it on or off.</p>
+<p>Also on <a href="https://youtu.be/_kSztm_dDDk">YouTube</a>.
+If that doesn't play, download it: <a href="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/bootstrap-asmr.mp4">smaller (101 MB)</a> /
+<a href="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/bootstrap-asmr-full.mp4">full quality (253 MB)</a>.</p>
 <p><small>Before anyone says it: yes, we know <a href="https://github.com/pepsipu"><b>pepsipu</b></a> made <a href="https://gitlab.com/pepsipu/ns2jb">ns2jb</a>, which is where this bootstrap.bas comes from. gezine didn't write it, he's just being a good boy and reading it out for us.</small></p>
-
-<script>
-// ASMR player: YouTube embed, swapped for our own copy if YouTube errors, is blocked, or the link is clicked
-(function () {
-  const YT_ID = "_kSztm_dDDk";
-  let ready = false, swapped = false;
-  function useOwnCopy() {
-    if (swapped) return;
-    swapped = true;
-    document.getElementById("asmr-yt").hidden = true;
-    const v = document.getElementById("asmr-video");
-    v.hidden = false;
-    v.preload = "metadata";
-    v.load();
-  }
-  document.getElementById("asmr-own").onclick = (e) => {
-    e.preventDefault();
-    useOwnCopy();
-    document.getElementById("asmr-video").play().catch(() => {});
-  };
-  window.onYouTubeIframeAPIReady = () => {
-    new YT.Player("asmr-yt-player", {
-      videoId: YT_ID,
-      playerVars: { rel: 0, playsinline: 1 },
-      events: { onReady: () => { ready = true; }, onError: useOwnCopy },
-    });
-  };
-  const tag = document.createElement("script");
-  tag.src = "https://www.youtube.com/iframe_api";
-  tag.onerror = useOwnCopy; // YouTube blocked (school wifi, ad blockers, etc.)
-  document.head.append(tag);
-  setTimeout(() => { if (!ready) useOwnCopy(); }, 15000); // YouTube never showed up
-})();
-</script>
 
 <p>I just want to kiss you John Nintendo you are so sexy and strong and muscular with your awesome business practices, please take all of my money</p>
 
@@ -185,6 +183,7 @@ or download it: <a href="https://github.com/calamityCocoa/gezinegoodboy/releases
   <p><small>This website is under construction forever. You are visitor number 000069420.</small></p>
 </footer>
 
+<script src="game.js"></script>
 <script>
 // the backend lives in api/gezine.js on the same Vercel site
 const API_URL = "/api/gezine";
@@ -244,14 +243,30 @@ const ETAS = [
 $("eta-btn").onclick = () => show("eta", ETAS[Math.floor(Math.random() * ETAS.length)]);
 
 let isBad = false, pats = 0, fs = 0;
+// 30 headpats (or 30 respects) and gezine puts her headset on: see game.js
+const GAME_AT = 30;
+let gameOpened = false;
+function gameUnlocked() { $("game-row").hidden = false; }
+if (window.HeadsetHero && HeadsetHero.unlocked()) gameUnlocked();
+$("game-btn").onclick = () => HeadsetHero.open();
+function maybeStartGame(n) {
+  if (n === GAME_AT - 10 && window.HeadsetHero) HeadsetHero.preload(); // get the art ready early
+  if (n >= GAME_AT && !gameOpened && window.HeadsetHero) {
+    gameOpened = true;
+    gameUnlocked();
+    setTimeout(() => HeadsetHero.open(), 700); // let the last headpat finish first
+  }
+}
 $("mood-btn").onclick = () => {
   if (isBad) {
     show("mood-count", "F".repeat(Math.min(++fs, 40)) + " (" + fs + " respects paid to the exploits)");
     pending.respect++;
+    maybeStartGame(fs);
   } else {
-    show("mood-count", "headpats given: " + ++pats);
+    show("mood-count", "headpats given: " + ++pats + (pats >= GAME_AT - 10 && pats < GAME_AT ? " (she's reaching for her headset...)" : ""));
     pending.headpat++;
     headpat();
+    maybeStartGame(pats);
   }
   showGlobal();
 };
@@ -506,6 +521,47 @@ setInterval(check, 600000); // checks again every 10 minutes
 if (new URLSearchParams(location.search).get("test") === "flip") {
   setInterval(() => setMood(!isBad), 10000);
 }
+</script>
+
+<script>
+// ---------- background ASMR ----------
+// Browsers only allow sound after the visitor interacts, so it starts muted and
+// turns the sound on at the first click or key press (unless they switched it off).
+(function () {
+  const bg = $("bg"), btn = $("sound-btn");
+  let wantSound = true;
+  try { wantSound = localStorage.getItem("asmr-sound") !== "off"; } catch (e) {}
+
+  function label() { btn.textContent = bg.muted ? "🔇 Sound on" : "🔊 Sound off"; }
+  function setSound(on, remember) {
+    bg.muted = !on;
+    // if the browser still says no to sound, keep it playing muted rather than stopped
+    bg.play().catch(() => { bg.muted = true; bg.play().catch(() => {}); });
+    if (remember) { wantSound = on; try { localStorage.setItem("asmr-sound", on ? "on" : "off"); } catch (e) {} }
+    label();
+  }
+
+  btn.onclick = () => setSound(bg.muted, true);
+  bg.addEventListener("volumechange", label);
+
+  // people on Data Saver only get the video if they press the sound button
+  const saveData = navigator.connection && navigator.connection.saveData;
+  if (saveData) { bg.removeAttribute("autoplay"); bg.preload = "none"; wantSound = false; }
+
+  // try with sound straight away (works if they've been here before), otherwise muted
+  bg.muted = !wantSound;
+  if (!saveData) bg.play().catch(() => { bg.muted = true; bg.play().catch(() => {}); label(); });
+  label();
+
+  // phones only count a tap once the finger lifts, so listen for all of these until it works
+  const EVENTS = ["pointerdown", "pointerup", "touchend", "click", "keydown"];
+  function firstTouch(e) {
+    if (e.target === btn || !wantSound) return; // the button handles itself
+    if (bg.muted || bg.paused) setSound(true, false); // paused happens in iOS Low Power Mode
+    if (!bg.muted) EVENTS.forEach((t) => removeEventListener(t, firstTouch, true));
+  }
+  EVENTS.forEach((t) => addEventListener(t, firstTouch, true));
+})();
 </script>
 
 </body>
