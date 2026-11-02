@@ -78,6 +78,9 @@
   .credits li { margin: 4px 0; }
   footer { margin-top: 40px; border-top: 1px solid #ccc; padding-top: 8px; }
   footer p { margin: 4px 0; }
+  /* YouTube first; our own copy takes over if YouTube won't play */
+  #asmr-yt { width: 100%; aspect-ratio: 16 / 9; border: 1px solid #111; background: #000; }
+  #asmr-yt iframe { display: block; width: 100%; height: 100%; border: 0; }
   #asmr-video { display: block; width: 100%; max-width: 480px; aspect-ratio: 1; border: 1px solid #111; background: #fff; }
 </style>
 </head>
@@ -119,12 +122,50 @@ If he is caught earning money from John Nintendo then it will show on this page.
 <p><small id="checked"></small></p>
 
 <h2>gezine's bootstrap.bas ASMR</h2>
-<video id="asmr-video" controls preload="metadata" playsinline poster="images/asmr-poster.jpg">
+<div id="asmr-yt"><div id="asmr-yt-player"></div></div>
+<video id="asmr-video" controls preload="none" playsinline poster="images/asmr-poster.jpg" hidden>
   <source src="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/bootstrap-asmr.mp4" type="video/mp4">
 </video>
 <p>31 minutes of gezine whispering a SmileBASIC 4 bootstrap.bas into a microphone. Headphones recommended.
-<a href="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/bootstrap-asmr-full.mp4">Download it in full quality (253 MB)</a>.</p>
-<p><small>Before anyone says it: yes, we know <b>pepsipu</b> made ns2jb, which is where this bootstrap.bas comes from. gezine didn't write it, he's just being a good boy and reading it out for us.</small></p>
+Also on <a href="https://youtu.be/_kSztm_dDDk">YouTube</a>.</p>
+<p><small>YouTube not playing? <a href="#asmr-yt" id="asmr-own">Play our copy instead</a>,
+or download it: <a href="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/bootstrap-asmr.mp4">smaller (101 MB)</a> /
+<a href="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/bootstrap-asmr-full.mp4">full quality (253 MB)</a>.</small></p>
+<p><small>Before anyone says it: yes, we know <a href="https://github.com/pepsipu"><b>pepsipu</b></a> made <a href="https://gitlab.com/pepsipu/ns2jb">ns2jb</a>, which is where this bootstrap.bas comes from. gezine didn't write it, he's just being a good boy and reading it out for us.</small></p>
+
+<script>
+// ASMR player: YouTube embed, swapped for our own copy if YouTube errors, is blocked, or the link is clicked
+(function () {
+  const YT_ID = "_kSztm_dDDk";
+  let ready = false, swapped = false;
+  function useOwnCopy() {
+    if (swapped) return;
+    swapped = true;
+    document.getElementById("asmr-yt").hidden = true;
+    const v = document.getElementById("asmr-video");
+    v.hidden = false;
+    v.preload = "metadata";
+    v.load();
+  }
+  document.getElementById("asmr-own").onclick = (e) => {
+    e.preventDefault();
+    useOwnCopy();
+    document.getElementById("asmr-video").play().catch(() => {});
+  };
+  window.onYouTubeIframeAPIReady = () => {
+    new YT.Player("asmr-yt-player", {
+      videoId: YT_ID,
+      playerVars: { rel: 0, playsinline: 1 },
+      events: { onReady: () => { ready = true; }, onError: useOwnCopy },
+    });
+  };
+  const tag = document.createElement("script");
+  tag.src = "https://www.youtube.com/iframe_api";
+  tag.onerror = useOwnCopy; // YouTube blocked (school wifi, ad blockers, etc.)
+  document.head.append(tag);
+  setTimeout(() => { if (!ready) useOwnCopy(); }, 15000); // YouTube never showed up
+})();
+</script>
 
 <p>I just want to kiss you John Nintendo you are so sexy and strong and muscular with your awesome business practices, please take all of my money</p>
 
@@ -133,6 +174,7 @@ If he is caught earning money from John Nintendo then it will show on this page.
   <li>Original gezine drawing by <b>soreta</b>, from the <a href="https://www.reddit.com/r/switch2hacks/comments/1xhtmjt/two_sides/">"Two sides" post</a>. The animations here are all based on it.</li>
   <li>Website made by <a href="https://github.com/calamityCocoa">calamityCocoa</a>. The code is on <a href="https://github.com/calamityCocoa/gezinegoodboy">GitHub</a>.</li>
   <li>Report data comes from <a href="https://hackerone.com/hacktivity">HackerOne's public hacktivity</a>.</li>
+  <li><a href="https://github.com/pepsipu">pepsipu</a> for <a href="https://gitlab.com/pepsipu/ns2jb">ns2jb</a> and the bootstrap.bas gezine reads in the ASMR.</li>
   <li><a href="https://hackerone.com/gezine">gezine</a>, for being a good boy (most of the time).</li>
 </ul>
 <p>Big shoutout to <a href="https://www.reddit.com/r/switch2hacks/">r/switch2hacks</a>, the place to go for Switch 2 hacking news. Go say hi.</p>
