@@ -345,6 +345,7 @@
 
   function controls(g) {
     const t = touchy();
+    if (g.controls) return typeof g.controls === "function" ? g.controls(t) : g.controls;
     return {
       clicker: t ? "Tap gezine to pat her." : "Click gezine, or press Space.",
       typer: "Type the line exactly (capitals don't matter). It moves on by itself.",
@@ -431,9 +432,10 @@
     };
   }
 
+  let pendingOpen = null;
   function open(id) {
     const g = byId[id];
-    if (!g) return;
+    if (!g) { pendingOpen = id; return; } // a plug-in game that hasn't loaded yet
     setPlayParam(id);
     if (id === "dodge") { if (window.HeadsetHero) window.HeadsetHero.open(); return; }
     build();
@@ -856,7 +858,18 @@
     if (want && byId[want]) setTimeout(() => open(want), 0);
   }
 
-  window.GezArcade = { open, renderBoard, games: GAMES, linkFor };
+  // ---------------------------------------------------------------- plug-in games
+  // Extra games live in games/<id>.js and call GezArcade.register({...}). See docs/GAME-PLUGIN.md.
+  function register(game) {
+    if (!game || !game.id || byId[game.id] || typeof game.start !== "function") return;
+    GAMES.push(game);
+    byId[game.id] = game;
+    IMPL[game.id] = (a) => game.start(a);
+    if (menuEl) { renderMenu(); renderTabs(); }
+    if (pendingOpen === game.id) { pendingOpen = null; open(game.id); }
+  }
+
+  window.GezArcade = { open, renderBoard, games: GAMES, linkFor, register };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 })();
