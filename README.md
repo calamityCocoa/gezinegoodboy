@@ -11,6 +11,8 @@ Is gezine being a good boy? A satire site: https://gezinegoodboy.vercel.app
   Whack-a-John, Pose Match and Combo Says. The lines that bury her when you lose are pepsipu's real
   [bootstrap.bas](https://gitlab.com/pepsipu/ns2jb/-/blob/main/bootstrap.bas), fetched live from GitLab (not copied here).
 - `api/gezine.js`: HackerOne lookup
+- `peek.js`: peekaboo. gezine, John Nintendo and pepsipu peek out from behind cards now and then
+  (sprites in `images/peek/`, drawn with ChatGPT image generation). `GezPeek.now()` triggers one.
 - `api/_lib.js`: shared database access and rate limiting (hashed IPs, standard RateLimit headers)
 - `api/counts.js`: global headpat / respects counters
 - `api/scores.js`: global leaderboards for every arcade game
