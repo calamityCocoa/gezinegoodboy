@@ -7,6 +7,7 @@
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script src="device.js"></script>
 <!-- link previews (Discord, Twitter, iMessage, etc.) -->
 <meta name="description" content="Tracking gezine's HackerOne to make sure he hasn't been naughty and earned money from John Nintendo. Now with 31 minutes of bootstrap.bas ASMR.">
 <meta name="theme-color" content="#c2185b">
@@ -56,7 +57,9 @@
   .bubble { flex: 1 1 200px; border: 1px solid #111; border-radius: 12px; padding: 10px 14px; margin: 0; }
 
   /* square stage: gezine close up, or zoomed out with John Nintendo */
-  #stage { position: relative; width: 320px; max-width: 100%; aspect-ratio: 1; overflow: hidden; border: 1px solid #111; background: #fff; }
+  #stage { position: relative; width: 320px; max-width: 100%; height: 320px; height: min(320px, calc(100vw - 32px));
+           overflow: hidden; border: 1px solid #111; background: #fff; }
+  @supports (aspect-ratio: 1) { #stage { height: auto; aspect-ratio: 1; } }
   #gez {
     position: absolute; left: 6.19%; bottom: 2%; width: 87.62%; aspect-ratio: 400 / 420;
     transform-origin: 44.12% 98.1%;              /* her feet */
@@ -95,7 +98,7 @@
 
   /* the ASMR plays behind everything; the page is a see-through panel on top */
   html { background: #fff; }
-  #bg { position: fixed; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: contain; background: #fff; }
+  #bg { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: -1; width: 100%; height: 100%; object-fit: contain; background: #fff; }
   #sound-btn {
     position: fixed; z-index: 10; padding: 8px 14px; min-height: 44px; color: #111; font: inherit; font-size: .9em;
     right: calc(16px + env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom));
@@ -108,6 +111,44 @@
   #game-board .hh-board td:last-child, #game-board .hh-board th:last-child { text-align: right; }
   #game-board .hh-board td:nth-child(2) { overflow-wrap: anywhere; }
   #game-board tr.me { background: #ffe8f0; font-weight: bold; }
+  /* which device you're on (device.js) */
+  .device-line { display: none; margin: 10px 0 0; padding: 6px 10px; font-size: .92em; background: #fff;
+                 border-left: 4px solid #111; border-left-color: var(--accent, #111); }
+  html { color-scheme: light; }
+  a:focus, button:focus, input:focus { outline: 3px solid #7fb8f0; outline-offset: 2px; }
+  a:focus:not(:focus-visible), button:focus:not(:focus-visible) { outline: none; }
+
+  /* credits with profile pictures */
+  .credits { list-style: none; padding: 0; }
+  .credits li { position: relative; margin: 12px 0; min-height: 50px; padding-left: 62px; }
+  .avatar { position: absolute; left: 0; top: 2px; width: 48px; height: 48px; margin: 0; border-radius: 50%; border: 1px solid #111;
+            background: #fff; display: block; object-fit: cover; }
+  .avatar.initial { text-align: center; line-height: 48px; font-weight: bold; color: #fff; overflow: hidden; }
+  .credits b.who { display: block; }
+
+  /* old browsers get the "classic" page (legacy.js): no video, animations or game */
+  .legacy-only { display: none; }
+  .legacy .legacy-only { display: block; }
+  .legacy .modern-only, .legacy #bg, .legacy #sound-btn, .legacy .toggle, .legacy .play-btn { display: none !important; }
+  .legacy body { background: #fff; padding-bottom: 24px; margin: 0 auto !important; }
+  .legacy #gezine-img { animation: none !important; }
+
+  /* TVs and consoles on the sofa: bigger everything, obvious focus */
+  .tv body { font-size: 20px; max-width: 900px; }
+  .tv button, .fam-nintendo button { min-height: 48px; padding: 8px 18px; font-size: 1em; }
+  .tv a:focus, .tv button:focus, .fam-nintendo a:focus, .fam-nintendo button:focus { outline: 4px solid #7fb8f0; outline-color: var(--accent, #7fb8f0); outline-offset: 3px; }
+  /* e-ink: no motion at all */
+  .eink *, .eink *::before, .eink *::after { animation: none !important; transition: none !important; }
+  @media (prefers-reduced-motion: reduce) {
+    #gezine-img { animation: none !important; }
+    #gez { transition: none !important; }
+  }
+  /* small handheld screens (3DS, KaiOS, tiny phones) */
+  @media (max-width: 360px) {
+    body { font-size: 15px; }
+    h1 { font-size: 1.6em; }
+  }
+
   /* phones and tablets */
   html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   body { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right));
@@ -122,7 +163,7 @@
 </style>
 </head>
 <body>
-<video id="bg" autoplay muted loop playsinline preload="auto" poster="images/asmr-poster.jpg" aria-hidden="true">
+<video id="bg" muted loop playsinline preload="none" poster="images/asmr-poster.jpg" aria-hidden="true">
   <source src="https://calamitycocoa.github.io/gezinegoodboy-media/asmr.mp4" type="video/mp4">
   <source src="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/bootstrap-asmr.mp4" type="video/mp4">
 </video>
@@ -130,6 +171,7 @@
 
 <h1>Is gezine a good boy?</h1>
 <marquee>BREAKING NEWS: John Nintendo's lawyers have entered the chat &bull;&bull;&bull; ETA WEN? &bull;&bull;&bull; DO NOT UPDATE YOUR SWITCH 2 &bull;&bull;&bull; gezine has been spotted near a hut &bull;&bull;&bull; it's not a brick if you believe hard enough &bull;&bull;&bull; John Nintendo is watching &bull;&bull;&bull;</marquee>
+<p class="device-line" id="device-line"></p>
 <p class="verdict" id="verdict">Checking...</p>
 <p class="toggle"><label><input type="checkbox" id="uwu-toggle"> uwu mode</label></p>
 
@@ -153,7 +195,7 @@ If he is caught earning money from John Nintendo then it will show on this page.
 <div class="buttons">
   <p><button id="mood-btn">...</button> <span id="mood-count"></span></p>
   <p><button id="eta-btn">ETA WEN?</button> <span id="eta"></span></p>
-  <p><button class="play-btn" data-play-game>🎧 Play Headset Hero</button></p>
+  <p class="modern-only"><button class="play-btn" data-play-game>🎧 Play Headset Hero</button></p>
   <p id="global" hidden>Everyone so far: <b id="g-pats">0</b> headpats and <b id="g-fs">0</b> respects paid.</p>
 </div>
 
@@ -172,6 +214,7 @@ If that doesn't play, download it: <a href="https://github.com/calamityCocoa/gez
 <a href="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/bootstrap-asmr-full.mp4">full quality (253 MB)</a>.</p>
 <p><small>Before anyone says it: yes, we know <a href="https://github.com/pepsipu"><b>pepsipu</b></a> made <a href="https://gitlab.com/pepsipu/ns2jb">ns2jb</a>, which is where this bootstrap.bas comes from. gezine didn't write it, he's just being a good boy and reading it out for us.</small></p>
 
+<div class="modern-only">
 <h2 id="headset-hero">Headset Hero</h2>
 <p>gezine put her headset on. Catch the notes, SmileBASIC tokens and stars, and dodge John Nintendo's DMCA letters.
 Get hit three times and the real <a href="https://gitlab.com/pepsipu/ns2jb/-/blob/main/bootstrap.bas">bootstrap.bas</a> falls on her, line by line.
@@ -179,19 +222,31 @@ Works with a keyboard, a mouse or a finger. (Psst: 30 headpats also gets you in.
 <p><button class="play-btn" data-play-game>▶ Play Headset Hero</button></p>
 <h3>Leaderboard</h3>
 <div id="game-board"><p><small>Loading...</small></p></div>
+</div>
+<div class="legacy-only">
+<h2>Headset Hero</h2>
+<p>gezine's headset game needs a newer browser than this one. Try it on a phone, a computer or a Switch.</p>
+</div>
 
 <p>I just want to kiss you John Nintendo you are so sexy and strong and muscular with your awesome business practices, please take all of my money</p>
 
 <h2>Credits</h2>
 <ul class="credits">
-  <li>Original gezine drawing by <b>soreta</b>, from the <a href="https://www.reddit.com/r/switch2hacks/comments/1xhtmjt/two_sides/">"Two sides" post</a>. The animations here are all based on it.</li>
-  <li>Website made by <a href="https://github.com/calamityCocoa">calamityCocoa</a>. The code is on <a href="https://github.com/calamityCocoa/gezinegoodboy">GitHub</a>.</li>
-  <li>Report data comes from <a href="https://hackerone.com/hacktivity">HackerOne's public hacktivity</a>.</li>
-  <li><a href="https://miyao.dev">miyao</a>, for uploading the ASMR to <a href="https://youtu.be/_kSztm_dDDk">YouTube</a>.</li>
-  <li><a href="https://github.com/pepsipu">pepsipu</a> for <a href="https://gitlab.com/pepsipu/ns2jb">ns2jb</a> and the bootstrap.bas gezine reads in the ASMR.</li>
-  <li><a href="https://hackerone.com/gezine">gezine</a>, for being a good boy (most of the time).</li>
+  <li><span class="avatar initial" style="background:#f29bb0" aria-hidden="true">S</span>
+    <b class="who">soreta</b> Original gezine drawing, from the <a href="https://www.reddit.com/r/switch2hacks/comments/1xhtmjt/two_sides/">"Two sides" post</a>. The animations here are all based on it.</li>
+  <li><a href="https://github.com/calamityCocoa"><img class="avatar" src="images/credits/calamitycocoa.jpg" width="48" height="48" alt="" loading="lazy"></a>
+    <b class="who"><a href="https://github.com/calamityCocoa">calamityCocoa</a></b> Made this website. The code is on <a href="https://github.com/calamityCocoa/gezinegoodboy">GitHub</a>.</li>
+  <li><a href="https://github.com/pepsipu"><img class="avatar" src="images/credits/pepsipu.jpg" width="48" height="48" alt="" loading="lazy"></a>
+    <b class="who"><a href="https://github.com/pepsipu">pepsipu</a></b> Made <a href="https://gitlab.com/pepsipu/ns2jb">ns2jb</a> and the bootstrap.bas gezine reads in the ASMR (and that buries her in Headset Hero).</li>
+  <li><a href="https://miyao.dev"><img class="avatar" src="images/credits/miyao.jpg" width="48" height="48" alt="" loading="lazy"></a>
+    <b class="who"><a href="https://miyao.dev">miyao</a></b> Uploaded the ASMR to <a href="https://youtu.be/_kSztm_dDDk">YouTube</a>.</li>
+  <li><a href="https://github.com/Gezine"><img class="avatar" src="images/credits/gezine.jpg" width="48" height="48" alt="" loading="lazy"></a>
+    <b class="who"><a href="https://hackerone.com/gezine">gezine</a></b> For being a good boy (most of the time). His exploits are on <a href="https://github.com/Gezine">GitHub</a>.</li>
+  <li><span class="avatar initial" style="background:#494649" aria-hidden="true">H1</span>
+    <b class="who">HackerOne</b> Report data comes from <a href="https://hackerone.com/hacktivity">HackerOne's public hacktivity</a>.</li>
+  <li><span class="avatar initial" style="background:#ff4500" aria-hidden="true">r/</span>
+    <b class="who"><a href="https://www.reddit.com/r/switch2hacks/">r/switch2hacks</a></b> The place to go for Switch 2 hacking news. Go say hi.</li>
 </ul>
-<p>Big shoutout to <a href="https://www.reddit.com/r/switch2hacks/">r/switch2hacks</a>, the place to go for Switch 2 hacking news. Go say hi.</p>
 
 <footer>
   <p><small>Not affiliated with Nintendo, HackerOne or gezine.</small></p>
@@ -199,387 +254,10 @@ Works with a keyboard, a mouse or a finger. (Psst: 30 headpats also gets you in.
   <p><small>This website is under construction forever. You are visitor number 000069420.</small></p>
 </footer>
 
-<script src="game.js"></script>
-<script>
-// the backend lives in api/gezine.js on the same Vercel site
-const API_URL = "/api/gezine";
+<script type="module" src="game.js"></script>
+<script type="module" src="app.js"></script>
+<script nomodule src="legacy.js"></script>
 
-const BAD = "I've been a bad boy!";
-const GOOD = "I'm living in a hut in the middle of nowhere and not helping the hacking community with their Switch 2 fun and i'm boring and sad and enabled emails so nintendo could DMCA me and stuff";
-
-const $ = (id) => document.getElementById(id);
-function show(id, text) { $(id).textContent = text; }
-
-// ---------- uwu mode (off by default, the checkbox turns it on) ----------
-let uwuOn = false;
-try { uwuOn = localStorage.getItem("uwu") === "on"; } catch (e) {}
-$("uwu-toggle").checked = uwuOn;
-$("uwu-toggle").onchange = () => {
-  uwuOn = $("uwu-toggle").checked;
-  try { localStorage.setItem("uwu", uwuOn ? "on" : "off"); } catch (e) {}
-  setUwu(uwuOn);
-  setTitle();
-};
-
-function setTitle() {
-  document.title = uwuOn ? "Gezine Good Boy Twackew uwu" : isBad ? "BAD BOY ALERT" : "Gezine Good Boy Tracker";
-}
-
-const FACES = ["uwu", "owo", ">w<", "^w^", ":3", "nya~"];
-const originals = new Map();
-
-function uwu(t) {
-  return t
-    .replace(/[rl]/g, "w").replace(/[RL]/g, "W")
-    .replace(/n([aeiou])/g, "ny$1").replace(/N([aeiouAEIOU])/g, "Ny$1")
-    .replace(/ove/g, "uv")
-    .replace(/([.!?])(\s|$)/g, (m, p, s) => p + " " + FACES[Math.floor(Math.random() * FACES.length)] + s);
-}
-
-function setUwu(on) {
-  for (const [node, text] of originals) node.nodeValue = text; // undo the old uwu first
-  originals.clear();
-  if (!on) return;
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-    acceptNode: (n) => ["SCRIPT", "STYLE"].includes(n.parentNode.nodeName) || !n.nodeValue.trim()
-      ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
-  });
-  while (walker.nextNode()) {
-    originals.set(walker.currentNode, walker.currentNode.nodeValue);
-    walker.currentNode.nodeValue = uwu(walker.currentNode.nodeValue);
-  }
-}
-
-// ---------- buttons ----------
-const ETAS = [
-  "Soon™", "2 weeks", "When it's ready", "Every time you ask it gets delayed a week",
-  "When John Nintendo stops watching", "gezine is busy in his hut, try again later",
-  "After the next firmware update patches it", "Never. Go outside.",
-];
-$("eta-btn").onclick = () => show("eta", ETAS[Math.floor(Math.random() * ETAS.length)]);
-
-let isBad = false, pats = 0, fs = 0;
-// Headset Hero (game.js): the play buttons, the leaderboard on the page,
-// and 30 headpats (or 30 respects) opens it as a surprise
-const GAME_AT = 30;
-let gameOpened = false;
-document.querySelectorAll("[data-play-game]").forEach((b) => { b.onclick = () => HeadsetHero.open(); });
-const refreshBoard = () => HeadsetHero.renderBoard($("game-board"), 10, (() => { try { return localStorage.getItem("headset-name"); } catch (e) { return null; } })());
-refreshBoard();
-window.onHeadsetHeroClose = refreshBoard;
-function maybeStartGame(n) {
-  if (n === GAME_AT - 10) HeadsetHero.preload(); // get the art ready early
-  if (n >= GAME_AT && !gameOpened) {
-    gameOpened = true;
-    setTimeout(() => HeadsetHero.open("pats"), 700); // let the last headpat finish first
-  }
-}
-$("mood-btn").onclick = () => {
-  if (isBad) {
-    show("mood-count", "F".repeat(Math.min(++fs, 40)) + " (" + fs + " respects paid to the exploits)");
-    pending.respect++;
-    maybeStartGame(fs);
-  } else {
-    show("mood-count", "headpats given: " + ++pats + (pats >= GAME_AT - 10 && pats < GAME_AT ? " (she's reaching for her headset...)" : ""));
-    pending.headpat++;
-    headpat();
-    maybeStartGame(pats);
-  }
-  showGlobal();
-};
-
-// ---------- global counters (shared by everyone, stored by api/counts.js) ----------
-// Clicks are saved up and sent every 2 seconds, so spamming the button is one request, not hundreds.
-const pending = { headpat: 0, respect: 0 };
-let globalTotals = null;
-
-function showGlobal() {
-  if (!globalTotals) return;
-  $("global").hidden = false;
-  show("g-pats", (globalTotals.headpats + pending.headpat).toLocaleString());
-  show("g-fs", (globalTotals.respects + pending.respect).toLocaleString());
-}
-
-async function loadGlobal() {
-  try {
-    const res = await fetch("/api/counts");
-    if (!res.ok) return; // database not connected yet: the line just stays hidden
-    globalTotals = await res.json();
-    showGlobal();
-  } catch (e) {}
-}
-
-async function sendClicks() {
-  for (const type of ["headpat", "respect"]) {
-    const n = Math.min(pending[type], 25);
-    if (!n) continue;
-    pending[type] -= n;
-    try {
-      const res = await fetch(`/api/counts?type=${type}&n=${n}`, { method: "POST" });
-      const body = await res.json();
-      if (body.headpats !== undefined) globalTotals = body;
-    } catch (e) {}
-  }
-  showGlobal();
-}
-
-// send any last clicks if the visitor leaves the page
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState !== "hidden") return;
-  for (const type of ["headpat", "respect"]) {
-    const n = Math.min(pending[type], 25);
-    if (n && navigator.sendBeacon(`/api/counts?type=${type}&n=${n}`)) pending[type] -= n;
-  }
-});
-
-loadGlobal();
-setInterval(sendClicks, 2000);
-setInterval(loadGlobal, 30000);
-
-// ---------- gezine's animations ----------
-// Every animation starts and ends on the neutral pose (or a matching transition),
-// so they can be chained in any order without a jump.
-const frames = (dir) => [0, 1, 2, 3].map((n) => "images/" + dir + "/" + n + ".png");
-const ANIMS = {
-  good:   { frames: frames("good"),   ms: [700, 350, 140, 450] },
-  bad:    { frames: frames("bad"),    ms: [450, 180, 380, 220] },
-  pat:    { frames: frames("pat"),    ms: [220, 260, 380, 600], cls: "patting" },
-  game:   { frames: frames("game"),   ms: [450, 200, 350, 650], cls: "gaming" },
-  pickup: { frames: frames("pickup"), ms: [250, 300, 300, 250], holds: true },
-  caught: { frames: frames("caught"), ms: [200, 550, 350, 300] },
-};
-ANIMS.putdown = { frames: [...ANIMS.pickup.frames].reverse(), ms: [...ANIMS.pickup.ms].reverse(), drops: true };
-
-const JOHN = {
-  loop:  { frames: frames("john"),       ms: [550, 350, 650, 300] },
-  enter: { frames: frames("john-enter"), ms: [350, 350, 400, 300] },
-  leave: { frames: frames("john-leave"), ms: [350, 500, 450, 500] },
-};
-for (const a of [...Object.values(ANIMS), ...Object.values(JOHN)]) for (const f of a.frames) new Image().src = f;
-
-let gezTimer, busy = false, holding = false;
-
-// play each step once, in order, then loop `loop` forever. onDone runs when the steps finish.
-function play(steps, loop, onDone) {
-  clearTimeout(gezTimer);
-  const img = $("gezine-img");
-  const seq = steps.map((n) => ANIMS[n]);
-  let s = 0, i = 0;
-  busy = seq.length > 0;
-
-  const begin = (a) => {
-    img.classList.remove("patting", "gaming");
-    void img.offsetWidth; // restarts the squish if headpats are spammed
-    if (a.cls) img.classList.add(a.cls);
-    if (a.holds) holding = true;
-  };
-  begin(seq[0] || ANIMS[loop]);
-
-  const step = () => {
-    while (s < seq.length && i >= seq[s].frames.length) { // finished a step, move to the next
-      if (seq[s].drops) holding = false;
-      s++; i = 0;
-      begin(seq[s] || ANIMS[loop]);
-      if (s === seq.length && onDone) onDone();
-    }
-    if (s >= seq.length) busy = false;
-    const a = seq[s] || ANIMS[loop];
-    if (i >= a.frames.length) i = 0;
-    img.src = a.frames[i];
-    gezTimer = setTimeout(step, a.ms[i]);
-    i++;
-  };
-  step();
-}
-
-let johnTimer;
-// play one of John's animations; then = "loop" keeps looming, or a function to run when it ends
-function johnPlay(name, then) {
-  clearTimeout(johnTimer);
-  const a = JOHN[name];
-  let i = 0;
-  const step = () => {
-    if (i >= a.frames.length) return then === "loop" ? johnPlay("loop", "loop") : then();
-    $("john-img").src = a.frames[i];
-    johnTimer = setTimeout(step, a.ms[i]);
-    i++;
-  };
-  step();
-}
-
-// ---------- moods and the camera ----------
-let mood = null, moving = false, token = 0;
-const putDownFirst = () => (holding ? ["putdown"] : []);
-
-function showScene(on) {
-  $("gez").hidden = on;
-  $("john-img").hidden = !on;
-}
-
-function changeMood(bad) {
-  const target = bad ? "bad" : "good";
-  if (mood === target) return;
-  const first = mood === null;
-  mood = target;
-  const my = ++token; // a newer mood change cancels anything still in progress
-
-  if (first) { // page load: no transitions
-    if (bad) { $("gez").classList.add("far"); showScene(true); johnPlay("loop", "loop"); }
-    else play([], "good");
-    return;
-  }
-
-  moving = true;
-  if (bad) {
-    // caught -> trembles -> camera pulls back -> John rises up
-    showScene(false);
-    $("gez").classList.remove("far");
-    play([...putDownFirst(), "caught", "bad"], "bad", () => {
-      if (my !== token) return;
-      $("gez").classList.add("far");
-      setTimeout(() => {
-        if (my !== token) return;
-        clearTimeout(gezTimer);
-        showScene(true);
-        johnPlay("enter", "loop");
-        moving = false;
-      }, 1000);
-    });
-  } else {
-    // John chases the money bag away -> camera pushes back in
-    johnPlay("leave", () => {
-      if (my !== token) return;
-      $("gez").classList.add("far");
-      showScene(false);
-      play([], "good");
-      requestAnimationFrame(() => requestAnimationFrame(() => $("gez").classList.remove("far")));
-      setTimeout(() => { if (my === token) moving = false; }, 1000);
-    });
-  }
-}
-
-function headpat() {
-  if (mood === "good" && !moving) play([...putDownFirst(), "pat"], "good");
-}
-
-// every 20 seconds, if he's being good and just standing there, he plays his console for a bit
-setInterval(() => {
-  if (mood === "good" && !busy && !moving) play(["pickup", "game", "game", "putdown"], "good");
-}, 20000);
-
-function setMood(bad) {
-  isBad = bad;
-  changeMood(bad);
-  show("verdict", bad ? "No. He has been a bad boy." : "Yes. For now.");
-  show("bubble", bad ? BAD : GOOD);
-  show("mood-btn", bad ? "Press F to pay respects to the exploits" : "Give gezine headpats");
-  $("gezine-img").alt = bad ? "gezine looking guilty with a bag of money" : "gezine being a good boy";
-  document.body.className = bad ? "bad" : "good";
-  setTitle();
-  setUwu(uwuOn);
-}
-
-// ---------- data ----------
-async function check() {
-  try {
-    const data = await (await fetch(API_URL)).json();
-    if (data.error) throw new Error(data.error);
-
-    // add ?test=good or ?test=bad to the address to preview each mood
-    const test = new URLSearchParams(location.search).get("test");
-    if (test === "good" || test === "bad") data.badBoy = test === "bad";
-    if (test === "flip") data.badBoy = isBad; // keep whatever the flip timer last set
-
-    show("count", data.nintendoCount);
-    show("total", data.total);
-    show("days", data.lastNintendoAt
-      ? Math.floor((Date.now() - new Date(data.lastNintendoAt)) / 86400000)
-      : "never");
-
-    const body = $("reports");
-    body.innerHTML = "";
-    for (const r of data.reports) {
-      const tr = document.createElement("tr");
-      if (r.isNintendo) tr.className = "nintendo";
-      const cells = [
-        r.title || "Secret undisclosed report",
-        r.company || "hidden",
-        r.disclosed ? "disclosed" : "not disclosed",
-        r.activityAt ? new Date(r.activityAt).toLocaleDateString() : "unknown",
-      ];
-      cells.forEach((text, k) => {
-        const td = document.createElement("td");
-        if (k === 0 && r.url) {
-          const a = document.createElement("a");
-          a.href = r.url;
-          a.textContent = text;
-          td.append(a);
-        } else {
-          td.textContent = text;
-        }
-        tr.append(td);
-      });
-      body.append(tr);
-    }
-    if (!data.reports.length) body.innerHTML = '<tr><td colspan="4">No reports found</td></tr>';
-
-    show("checked", "Last checked: " + new Date(data.checkedAt).toLocaleString());
-    setMood(data.badBoy);
-  } catch (e) {
-    show("verdict", "Couldn't check right now, try again later.");
-    $("reports").innerHTML = '<tr><td colspan="4">Couldn\'t load reports</td></tr>';
-  }
-}
-
-check();
-setInterval(check, 600000); // checks again every 10 minutes
-
-// ?test=flip swaps between good and bad every 10 seconds, to check the transitions
-if (new URLSearchParams(location.search).get("test") === "flip") {
-  setInterval(() => setMood(!isBad), 10000);
-}
-</script>
-
-<script>
-// ---------- background ASMR ----------
-// Browsers only allow sound after the visitor interacts, so it starts muted and
-// turns the sound on at the first click or key press (unless they switched it off).
-(function () {
-  const bg = $("bg"), btn = $("sound-btn");
-  let wantSound = true;
-  try { wantSound = localStorage.getItem("asmr-sound") !== "off"; } catch (e) {}
-
-  function label() { btn.textContent = bg.muted ? "🔇 Sound on" : "🔊 Sound off"; }
-  function setSound(on, remember) {
-    bg.muted = !on;
-    // if the browser still says no to sound, keep it playing muted rather than stopped
-    bg.play().catch(() => { bg.muted = true; bg.play().catch(() => {}); });
-    if (remember) { wantSound = on; try { localStorage.setItem("asmr-sound", on ? "on" : "off"); } catch (e) {} }
-    label();
-  }
-
-  btn.onclick = () => setSound(bg.muted, true);
-  bg.addEventListener("volumechange", label);
-
-  // people on Data Saver only get the video if they press the sound button
-  const saveData = navigator.connection && navigator.connection.saveData;
-  if (saveData) { bg.removeAttribute("autoplay"); bg.preload = "none"; wantSound = false; }
-
-  // try with sound straight away (works if they've been here before), otherwise muted
-  bg.muted = !wantSound;
-  if (!saveData) bg.play().catch(() => { bg.muted = true; bg.play().catch(() => {}); label(); });
-  label();
-
-  // phones only count a tap once the finger lifts, so listen for all of these until it works
-  const EVENTS = ["pointerdown", "pointerup", "touchend", "click", "keydown"];
-  function firstTouch(e) {
-    if (e.target === btn || !wantSound) return; // the button handles itself
-    if (bg.muted || bg.paused) setSound(true, false); // paused happens in iOS Low Power Mode
-    if (!bg.muted) EVENTS.forEach((t) => removeEventListener(t, firstTouch, true));
-  }
-  EVENTS.forEach((t) => addEventListener(t, firstTouch, true));
-})();
-</script>
 
 </body>
 </html>

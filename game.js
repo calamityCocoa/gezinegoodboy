@@ -37,6 +37,7 @@
   const rand = (a, b) => a + Math.random() * (b - a);
   const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5; // roughly -1..1, bunched in the middle
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const DEV = window.GEZ_DEVICE || {}; // from device.js
   const MONO = 'ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
 
   // ---------------------------------------------------------------- assets
@@ -68,7 +69,9 @@
           const words = new Set();
           for (const l of lines) {
             if (l.startsWith("'")) continue; // comments
-            for (const m of l.replace(/"[^"]*"/g, " ").matchAll(/\b[A-Z][A-Z0-9_]{1,7}[#$%]?/g)) words.add(m[0]);
+            const re = /\b[A-Z][A-Z0-9_]{1,7}[#$%]?/g, plain = l.replace(/"[^"]*"/g, " ");
+            let m;
+            while ((m = re.exec(plain))) words.add(m[0]); // (no matchAll: the Switch 1 browser lacks it)
           }
           if (words.size >= 10) tokens = [...words];
         })
@@ -94,7 +97,7 @@
     async submit(run, name, score) {
       const r = await fetch(API, {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ run, name, score }),
+        body: JSON.stringify({ run, name, score, device: DEV.id }),
       });
       const b = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(b.error || "Couldn't reach the leaderboard");
@@ -104,9 +107,11 @@
 
   function boardHTML(top, n, mine) {
     if (!top.length) return "<p><small>No scores yet. Be the first!</small></p>";
+    const names = window.GEZ_DEVICE_NAMES || {};
     return '<table class="hh-board"><thead><tr><th>#</th><th>Name</th><th>Score</th></tr></thead><tbody>' +
       top.slice(0, n).map((e, i) =>
         "<tr" + (mine && e.name === mine ? ' class="me"' : "") + "><td>" + (i + 1) + "</td><td>" + esc(e.name) +
+        (e.device && names[e.device] ? ' <small class="hh-dev">on ' + esc(names[e.device]) + "</small>" : "") +
         "</td><td>" + e.score.toLocaleString() + "</td></tr>").join("") +
       "</tbody></table>";
   }
@@ -123,7 +128,7 @@
 
   // ---------------------------------------------------------------- DOM
   const css = `
-  #hh { position: fixed; inset: 0; z-index: 1000; background: rgba(255, 255, 255, .94); box-sizing: border-box;
+  #hh { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 1000; background: rgba(255, 255, 255, .94); box-sizing: border-box;
         padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         overscroll-behavior: contain; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
         -webkit-tap-highlight-color: transparent; }
@@ -134,6 +139,7 @@
   #hh-exit { right: calc(env(safe-area-inset-right) + 10px); }
   #hh-pause { right: calc(env(safe-area-inset-right) + 62px); }
   #hh-pause[hidden] { display: none; }
+  #hh-pause i { display: inline-block; width: 4px; height: 14px; margin: 0 2px; background: #111; vertical-align: middle; }
   #hh-panel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(92vw, 420px);
               box-sizing: border-box; max-height: 88%; overflow-y: auto; -webkit-overflow-scrolling: touch;
               background: #fff; border: 1px solid #111; border-radius: 14px; padding: 18px 20px; text-align: center;
@@ -158,6 +164,7 @@
   .hh-board td:last-child, .hh-board th:last-child { text-align: right; }
   .hh-board td:nth-child(2) { overflow-wrap: anywhere; }
   .hh-board tr.me { background: #ffe8f0; font-weight: bold; }
+  .hh-dev { font-weight: normal; color: #777; white-space: nowrap; }
   `;
   let root, canvas, ctx, panel, exitBtn, pauseBtn, lastFocus;
 
@@ -173,7 +180,7 @@
     root.setAttribute("aria-modal", "true");
     root.setAttribute("aria-label", "Headset Hero, gezine's headset game");
     root.innerHTML = '<canvas aria-hidden="true"></canvas>' +
-      '<button id="hh-pause" class="hh-corner" type="button" aria-label="Pause" hidden>❚❚</button>' +
+      '<button id="hh-pause" class="hh-corner" type="button" aria-label="Pause" hidden><i></i><i></i></button>' +
       '<button id="hh-exit" class="hh-corner" type="button" aria-label="Leave the game">✕</button>' +
       '<div id="hh-panel" aria-live="polite"></div>';
     document.body.append(root);
@@ -185,16 +192,32 @@
     exitBtn.onclick = close;
     pauseBtn.onclick = pause;
 
-    // pointer: she runs to wherever you point; tap or drag on phones
-    canvas.addEventListener("pointerdown", (e) => {
+    // she runs to wherever you point; tap or drag on touch screens
+    const xOf = (e) => {
+      const t = e.touches && e.touches[0] ? e.touches[0] : e.changedTouches && e.changedTouches[0] ? e.changedTouches[0] : e;
+      return t.clientX - canvas.getBoundingClientRect().left;
+    };
+    const down = (e) => {
       if (state === "dying") { skipBury(); return; }
-      pointerX = e.offsetX; pointerDown = true;
-      if (state === "play") try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-    });
-    canvas.addEventListener("pointermove", (e) => { if (pointerDown || e.pointerType === "mouse") pointerX = e.offsetX; });
+      pointerX = xOf(e); pointerDown = true; padActive = false;
+      if (e.pointerId !== undefined && state === "play") try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    };
+    const move = (e, mouse) => { if (pointerDown || mouse) { pointerX = xOf(e); padActive = false; } };
     const up = () => { pointerDown = false; };
-    canvas.addEventListener("pointerup", up);
-    canvas.addEventListener("pointercancel", up);
+    if (window.PointerEvent) {
+      canvas.addEventListener("pointerdown", down);
+      canvas.addEventListener("pointermove", (e) => move(e, e.pointerType === "mouse"));
+      canvas.addEventListener("pointerup", up);
+      canvas.addEventListener("pointercancel", up);
+    } else { // older browsers, including the Switch 1's
+      canvas.addEventListener("mousedown", down);
+      canvas.addEventListener("mousemove", (e) => move(e, true));
+      addEventListener("mouseup", up);
+      canvas.addEventListener("touchstart", (e) => { e.preventDefault(); down(e); }, { passive: false });
+      canvas.addEventListener("touchmove", (e) => { e.preventDefault(); move(e, false); }, { passive: false });
+      canvas.addEventListener("touchend", up);
+      canvas.addEventListener("touchcancel", up);
+    }
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
     addEventListener("resize", resize);
@@ -227,6 +250,40 @@
   addEventListener("keydown", onKey);
   addEventListener("keyup", onKey);
 
+  // ---------------------------------------------------------------- controllers
+  // Any standard gamepad (Xbox, PlayStation, Switch Pro, Steam Deck): stick or D-pad to run,
+  // A to start / pick, B to leave, Start to pause; D-pad moves between menu buttons.
+  let padRaf = 0, padPrev = [];
+  function pollPad() {
+    padRaf = 0;
+    if (!root || root.hidden) return;
+    const pads = navigator.getGamepads ? navigator.getGamepads() : null;
+    let p = null;
+    if (pads) for (let i = 0; i < pads.length; i++) if (pads[i] && pads[i].connected !== false) { p = pads[i]; break; }
+    if (p) {
+      const held = (i) => !!(p.buttons[i] && (p.buttons[i].pressed || p.buttons[i].value > 0.5));
+      const pressed = (i) => held(i) && !padPrev[i];
+      let x = Math.abs(p.axes[0] || 0) > 0.25 ? p.axes[0] : 0;
+      if (held(14)) x = -1;
+      if (held(15)) x = 1;
+      if (x !== 0) { padActive = true; pointerX = null; }
+      padX = x;
+      if (state === "dying") { if (pressed(0) || pressed(1)) skipBury(); }
+      else if (state === "play") { if (pressed(9)) pause(); }
+      else if (!panel.hidden) {
+        const btns = [].slice.call(panel.querySelectorAll("button")).filter((b) => b.offsetParent && !b.disabled);
+        let i = btns.indexOf(document.activeElement);
+        if (btns.length && (pressed(15) || pressed(13))) btns[(i + 1) % btns.length].focus();
+        else if (btns.length && (pressed(14) || pressed(12))) btns[(i - 1 + btns.length) % btns.length].focus();
+        else if (pressed(9) && state === "paused") resume();
+        else if (pressed(0) && btns.length) (btns[i] || btns[0]).click();
+        else if (pressed(1)) close();
+      }
+      padPrev = [].map.call(p.buttons, (b) => b.pressed || b.value > 0.5);
+    }
+    padRaf = requestAnimationFrame(pollPad);
+  }
+
   // ---------------------------------------------------------------- sizing
   let W = 0, H = 0, dpr = 1, gh = 150, ground = 0;
   function resize() {
@@ -250,13 +307,13 @@
   // ---------------------------------------------------------------- game state
   let state = "closed", raf = 0, last = 0, T = 0, spawnIn = 0, runId = null, runPromise = null;
   let g = null, items = [], pops = [], score = 0, lives = 3, combo = 0, best = 0, overIn = 0, bury = null;
-  let pointerX = null, pointerDown = false;
+  let pointerX = null, pointerDown = false, padActive = false, padX = 0;
 
   function reset() {
     g = { x: W / 2, vx: 0, dir: 1, stun: 0, jump: 0, anim: 0, dead: false };
     items = []; pops = []; bury = null;
     score = 0; lives = 3; combo = 0; T = 0; spawnIn = 0.6; overIn = 0;
-    pointerX = null; pointerDown = false; keys.left = keys.right = false;
+    pointerX = null; pointerDown = false; keys.left = keys.right = false; padX = 0;
   }
 
   function spawn() {
@@ -306,6 +363,7 @@
     let want = 0;
     if (g.stun > 0) want = 0;
     else if (keys.left !== keys.right) want = keys.left ? -maxV : maxV;
+    else if (padActive && Math.abs(padX) > 0.2) want = padX * maxV;
     else if (pointerX !== null) want = clamp((pointerX - g.x) * 9, -maxV, maxV);
     g.vx += (want - g.vx) * Math.min(1, dt * 14);
     if (Math.abs(want) < 1 && Math.abs(g.vx) < 25) g.vx = 0;
@@ -592,6 +650,9 @@
   }
 
   function controlsText() {
+    const pad = navigator.getGamepads && [].slice.call(navigator.getGamepads() || []).some((p) => p);
+    if (pad) return "Controller: stick or D-pad to run, A to start, Start to pause.";
+    if (DEV.controls && (DEV.nintendo || DEV.tv || DEV.family === "playstation" || DEV.id === "steamdeck" || DEV.car)) return DEV.controls;
     return touchy()
       ? "Drag, or tap where you want her to run."
       : "Move the mouse, or use ← → (or A and D). P pauses, Esc leaves.";
@@ -604,6 +665,7 @@
     showPanel(
       "<h2>Headset Hero</h2>" +
       (reason === "pats" ? "<p>You gave gezine so many headpats she put her headset on.</p>" : "") +
+      (DEV.car ? "<p><b>Parked only, please.</b></p>" : "") +
       "<p>Catch ♪ notes, SmileBASIC tokens and ★ stars in her headset. Dodge John Nintendo's DMCA letters. Three strikes and the bootstrap buries her.</p>" +
       "<p><small>" + controlsText() + "</small></p>" +
       '<div id="hh-top"><p><small>Loading the leaderboard...</small></p></div>',
@@ -676,7 +738,8 @@
         form.remove();
         msg.textContent = res.rank ? "You're #" + res.rank + " on the leaderboard" + (res.best > score ? " (your best is " + res.best.toLocaleString() + ")" : "") + "!" : "Score sent!";
         panel.querySelector("#hh-top").innerHTML = boardHTML(res.top || [], 10, res.name || typed);
-        panel.querySelector("button.main, button")?.focus({ preventScroll: true });
+        const next = panel.querySelector("button.main, button");
+        if (next) next.focus({ preventScroll: true });
       } catch (err) {
         btn.disabled = false;
         msg.className = "msg err";
@@ -695,6 +758,8 @@
     store.set("headset-unlocked", "1");
     root.hidden = false;
     document.documentElement.style.overflow = "hidden";
+    padPrev = [];
+    if (!padRaf) padRaf = requestAnimationFrame(pollPad);
     state = "loading";
     W = 0; resize();
     reset();
