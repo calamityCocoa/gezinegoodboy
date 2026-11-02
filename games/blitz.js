@@ -60,6 +60,29 @@
       image.src = "images/blitz/" + name + "/" + i + ".png";
     }
   });
+  // Optional movement sheet must never disable the existing art or its fallback.
+  const airMeta = new XMLHttpRequest();
+  airMeta.open("GET", "images/blitz/meta.json", true);
+  airMeta.onload = function () {
+    if (airMeta.status !== 200) return;
+    try {
+      const meta = JSON.parse(airMeta.responseText), sheet = meta.sheets && meta.sheets.air2;
+      if (!sheet || ![sheet.w, sheet.h, sheet.anchorX, sheet.groundY].every(Number.isFinite) || sheet.w <= 0 || sheet.h <= 0) return;
+      const air = { w: sheet.w, h: sheet.h, anchorX: sheet.anchorX, groundY: sheet.groundY, frames: [], ready: false };
+      SPRITES.air2 = air;
+      let loaded = 0;
+      for (let i = 0; i < 4; i++) {
+        const image = new Image(); air.frames.push(image);
+        image.onload = function () {
+          if (image.naturalWidth === air.w && image.naturalHeight === air.h) loaded++;
+          air.ready = loaded === 4;
+        };
+        image.src = "images/blitz/air2/" + i + ".png";
+      }
+    } catch (e) { /* Missing/invalid optional art uses the established poses. */ }
+  };
+  airMeta.onerror = function () { /* Offline art fallback. */ };
+  airMeta.send();
   function spritesReady() { return spritesLoaded === 24 && !spritesFailed; }
   function sprite(name, frame, x, y, lean, squash) {
     const sheet = SPRITES[name];
@@ -163,6 +186,12 @@
     } else if (mode === "fall") {
       a = -0.45; b = 0.6; c = 0.55; d = -0.5; arm = -1.4; otherArm = 1.5;
       trail = 10; bob = 0; lean = -0.1;
+    } else if (mode === "dash") {
+      a = -0.9; b = 1.2; c = 0.8; d = -0.4; arm = 1.7; otherArm = 1.5;
+      lean = 0.38; bob = 0; trail = -22;
+    } else if (mode === "stomp") {
+      a = -0.12; b = 0; c = 0.16; d = 0; arm = -2.6; otherArm = 2.6;
+      lean = -0.12; bob = 0; trail = 15;
     } else if (mode === "slide") {
       a = 1.25; b = -0.05; c = -1.2; d = 1.5; arm = -2.4; otherArm = 0.9;
       rotate = -0.95; bob = 38; lean = 0.3; trail = -14;
@@ -331,18 +360,20 @@
 
   // Score proof (any rolling one-second window, not just clock buckets):
   // speed <= 26 m/s => at most 3 distance points. News are 80 m apart,
-  // hence at most one award, worth 25 + min(2, streak-1) <= 27. Total <=30.
+  // and local lead spans <13m, so even a dash crosses <39m in one second:
+  // at most one news award, worth 25 + min(2, streak-1) <=27. Total <=30.
   // Perfect 180s: integral(10 + min(10,t/10)) = 3100m. Six 4s boosts
   // at 400+480n add 144m => 3244m, 40 bulletins at 60+80n, score
-  // 324 + 25 + 26 + 38*27 = 1401. Trips never award points.
+  // 324 + 25 + 26 + 38*27 = 1401. Lead <=10m cannot reach news #41
+  // at 3260m (or plush #7 at 3280m). Trips/pogos never award points.
   // Catch protection lasts exactly 30s, including a short final grab animation.
   const game = {
     id: "blitz", title: "Better Gaming Blitz", art: menuArt,
     blurb: "A hand-drawn homebrew news dash! news by Better Gaming (youtube.com/@yu-gg). Help gezine collect Switch 2 bulletins and outrun John Nintendo for three minutes.",
     unit: "points", board: true,
     controls: (touch) => touch
-      ? "Tap/click upper ⅔ to jump; hold for height, tap again to double-jump. Lower ⅓ or swipe down: slide for 0.6s. John can catch you after 30s."
-      : "Space / Up / W / gamepad A: jump; release for a short hop, press again to double-jump. Hold Down / S / B to slide. Mouse: upper ⅔ jump, lower ⅓ slide. John can catch you after 30s.",
+      ? "Tap/click upper ⅔ to jump; hold for height, tap again to double-jump. Lower ⅓ / swipe down: slide or air pogo. Swipe right: dash. John can catch you after 30s."
+      : "Space / Up / W / gamepad A: jump; release for a short hop, press again to double-jump. Down / S / B: slide or air pogo. Shift / X / K / pad X or RB: dash. Left / Right or A / D: brake / sprint. Mouse: upper ⅔ jump, lower ⅓ slide/pogo. John can catch you after 30s.",
     start(api) {
       if (!document.getElementById("blitz-style")) {
         const style = document.createElement("style"); style.id = "blitz-style";
@@ -352,34 +383,57 @@
       const wrap = document.createElement("div"), canvas = document.createElement("canvas");
       wrap.className = "blitz-wrap"; canvas.className = "blitz-canvas";
       canvas.setAttribute("role", "img");
-      canvas.setAttribute("aria-label", "Collect Better Gaming news. Jump over firmware crates and paywalls; slide under flying DMCA envelopes. Upper area jumps; lower area slides.");
+      canvas.setAttribute("aria-label", "Collect Better Gaming news. Jump over firmware crates and paywalls; slide under flying DMCA envelopes. Upper area jumps; lower area slides or pogos. Swipe right to dash.");
       wrap.appendChild(canvas); api.stage.appendChild(wrap); ctx = canvas.getContext("2d");
       if (!ctx) { api.end(0, "The drawing desk couldn't open!"); return; }
       const main = ctx;
       const reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
       const STEP = 1 / 120, LIMIT = 180, PX = 12;
+      const JUMP = 760, DOUBLE = 700, CUT = 550, RISE_G = 1600, FALL_G = 2500;
+      const APEX_G = 700, APEX = 65, DASH_TIME = 0.18, DASH_COOLDOWN = 0.6;
+      function gravity(v, holding) { return holding && Math.abs(v) < APEX ? APEX_G : v > 0 ? RISE_G : FALL_G; }
+      // Integrate the same fixed-step physics, including a late double jump.
+      function flightTime(double) {
+        let h = 0, v = JUMP, age = 0, second = false;
+        do {
+          if (double && !second && v <= 0) { v = DOUBLE; second = true; }
+          v -= gravity(v, true) * STEP; h += v * STEP; age += STEP;
+        } while (h > 0 && age < 4);
+        return age;
+      }
+      const jumpAir = flightTime(false), doubleAir = flightTime(true);
       let width = 800, height = 460, ground = 380, runnerX = 180, transform = 1;
       let ticks = 0, time = 0, distance = 0, previousDistance = 0;
       let y = 0, previousY = 0, vy = 0, gap = 100, previousGap = 100;
       let jumps = 0, buffer = 0, coyote = 0.09, windup = 0, land = 0;
       let slide = 0, trip = 0, immunity = 0, boost = 0, spin = 0, shake = 0;
+      let support = null;
+      let dash = 0, dashCooldown = 0, airDash = true, stomp = false, fallPeak = 0, hardLand = 0;
+      // Local movement changes obstacle timing, never the scored auto-run odometer.
+      // Bounded lead also prevents sprint/dash from increasing the score ceiling.
+      let lead = 0, previousLead = 0, nudge = 0, left = false, right = false, padAxis = 0;
+      let cameraX = 0, cameraY = 0, previousCameraX = 0, previousCameraY = 0;
       let streak = 0, scoops = 0, newsPoints = 0, score = 0, bonus = 0;
       let comboUntil = 0, headlineUntil = 0, headlineIndex = -1, bannerLines = [];
       let caughtAt = -1, stopped = false, frame = 0, last = null, bank = 0, hudTick = -1;
       let keyboardJump = false, keyboardSlide = false, mouseJump = false;
-      let touchId = null, touchStartY = 0, touchJump = false, swiped = false;
-      let padJump = false, padSlide = false, touchStamp = -1000;
+      let touchId = null, touchStartX = 0, touchStartY = 0, touchJump = false, swiped = false;
+      let padJump = false, padSlide = false, padDash = false, touchStamp = -1000;
       let dustClock = 0, showHint = true, jumpAt = -1;
       try { showHint = !localStorage.getItem("blitz-hint"); localStorage.setItem("blitz-hint", "1"); } catch (e) { /* storage is optional */ }
-      const listeners = [], objects = [], particles = [], deck = [];
+      const listeners = [], objects = [], particles = [], deck = [], afterimages = [];
+      let trailClock = 0;
       for (let at = 60; at <= 3300; at += 80) objects.push({ kind: "news", at: at, done: false });
-      // Reserve the middle of an 80m news interval for each obstacle. As
-      // speed rises, skip a slot whenever needed to retain >=3.25s recovery,
-      // even at the fastest possible boosted speed at that distance.
+      // Reserve news-interval midpoints. Even the fastest boosted approach,
+      // a full double jump + air dash, landing/reaction time and the entire
+      // local movement range fit before the next obstacle (letters included).
       for (let at = 100, n = 0; at <= 3300; n++) {
         objects.push({ kind: ["crate", "letter", "gate"][n % 3], at: at, done: false });
-        const fastest = Math.min(20, Math.sqrt(100 + at * 0.2)) + 6;
-        at += Math.ceil(fastest * 3.25 / 80) * 80;
+        const speed = Math.min(20, Math.sqrt(100 + at * 0.2)) + 6;
+        const jumpDistance = speed * jumpAir;
+        const recoveryDistance = speed * (doubleAir - jumpAir + DASH_TIME + 0.55);
+        const clearance = (120 + 28 + 2 * 40) / PX;
+        at += Math.max(80, Math.ceil((jumpDistance + recoveryDistance + clearance) / 80) * 80);
       }
       for (let at = 400; at <= 3300; at += 480) objects.push({ kind: "plush", at: at, done: false });
       for (let i = 0; i < 96; i++) particles.push({ life: 0, x: 0, y: 0, px: 0, py: 0, vx: 0, vy: 0, color: WHITE, star: false });
@@ -463,22 +517,33 @@
       function slidePress() {
         if (caughtAt >= 0) return;
         slide = 0.6; windup = 0;
-        if (y > 0) vy = Math.min(vy, -560);
+        if (y > 0 && !support) { stomp = true; dash = 0; spin = 0; vy = -900; slide = 0; buffer = 0; }
+      }
+      function dashPress() {
+        if (stopped || document.hidden || caughtAt >= 0 || trip > 0.3 || dashCooldown > 0 || (y > 0 && !airDash)) return;
+        dash = DASH_TIME; dashCooldown = DASH_COOLDOWN; stomp = false; slide = windup = buffer = 0;
+        if (y > 0) airDash = false;
+        vy = 0; puff(runnerX + lead, ground - y - 35, PINK, 6, false);
       }
       function lower(clientY) {
         const r = canvas.getBoundingClientRect(); return clientY - r.top >= r.height * 2 / 3;
       }
       api.keys(function (e) {
         const k = String(e.key).toLowerCase();
-        if ([" ", "arrowup", "w", "arrowdown", "s"].indexOf(k) < 0) return;
+        if ([" ", "arrowup", "w", "arrowdown", "s", "arrowleft", "arrowright", "a", "d", "shift", "x", "k"].indexOf(k) < 0) return;
         e.preventDefault(); if (e.repeat) return;
-        if (k === "arrowdown" || k === "s") keyboardSlide = true;
+        if (k === "arrowleft" || k === "a") left = true;
+        else if (k === "arrowright" || k === "d") right = true;
+        else if (k === "shift" || k === "x" || k === "k") dashPress();
+        else if (k === "arrowdown" || k === "s") { keyboardSlide = true; slidePress(); }
         else { keyboardJump = true; jumpPress(); }
       });
       listen(window, "keyup", function (e) {
         const k = String(e.key).toLowerCase();
         if (k === " " || k === "arrowup" || k === "w") { keyboardJump = false; e.preventDefault(); }
         if (k === "arrowdown" || k === "s") { keyboardSlide = false; e.preventDefault(); }
+        if (k === "arrowleft" || k === "a") { left = false; e.preventDefault(); }
+        if (k === "arrowright" || k === "d") { right = false; e.preventDefault(); }
       });
       listen(canvas, "mousedown", function (e) {
         if (e.button !== 0 || time - touchStamp < 0.7) return;
@@ -488,15 +553,19 @@
       listen(canvas, "touchstart", function (e) {
         e.preventDefault(); touchStamp = time;
         if (touchId !== null || !e.changedTouches.length) return;
-        const t = e.changedTouches[0]; touchId = t.identifier; touchStartY = t.clientY; swiped = false;
-        if (lower(t.clientY)) { slidePress(); swiped = true; }
+        const t = e.changedTouches[0]; touchId = t.identifier; touchStartX = t.clientX; touchStartY = t.clientY; swiped = false;
+        if (lower(t.clientY)) slidePress();
         else { touchJump = true; jumpPress(); }
       }, { passive: false });
       listen(canvas, "touchmove", function (e) {
         e.preventDefault();
         for (let i = 0; i < e.changedTouches.length; i++) {
           const t = e.changedTouches[i];
-          if (t.identifier === touchId && !swiped && t.clientY - touchStartY > 26) {
+          if (t.identifier !== touchId || swiped) continue;
+          const dx = t.clientX - touchStartX, dy = t.clientY - touchStartY;
+          if (dx > 32 && dx > Math.abs(dy)) {
+            swiped = true; touchJump = false; dashPress();
+          } else if (dy > 26 && dy > Math.abs(dx)) {
             swiped = true; touchJump = false; slidePress();
           }
         }
@@ -508,19 +577,25 @@
       listen(canvas, "touchend", touchEnd, { passive: false }); listen(canvas, "touchcancel", touchEnd, { passive: false });
       function clearInput() {
         keyboardJump = keyboardSlide = mouseJump = touchJump = padJump = padSlide = false;
+        left = right = padDash = false; padAxis = 0;
         touchId = null; buffer = slide = windup = 0; last = null; bank = 0;
       }
       listen(window, "blur", clearInput); listen(document, "visibilitychange", clearInput); listen(window, "resize", resize);
       function pollPad() {
         if (!navigator.getGamepads) return;
         let pads; try { pads = navigator.getGamepads(); } catch (e) { return; }
-        let a = false, b = false;
+        let a = false, b = false, d = false; padAxis = 0;
         for (let i = 0; i < pads.length; i++) {
           const p = pads[i]; if (!p) continue;
           a = a || !!(p.buttons[0] && p.buttons[0].pressed);
+          d = d || !!(p.buttons[2] && p.buttons[2].pressed) || !!(p.buttons[5] && p.buttons[5].pressed);
+          if (Math.abs(p.axes[0] || 0) > 0.2) padAxis = p.axes[0];
           b = b || !!(p.buttons[1] && p.buttons[1].pressed) || !!(p.buttons[13] && p.buttons[13].pressed) || p.axes[1] > 0.6;
         }
-        if (a && !padJump) jumpPress(); padJump = a; padSlide = b;
+        if (a && !padJump) jumpPress();
+        if (b && !padSlide) slidePress();
+        if (d && !padDash) dashPress();
+        padJump = a; padSlide = b; padDash = d;
       }
       function puff(x, py, color, count, stars) {
         if (reduced) count = Math.min(count, 3);
@@ -549,40 +624,74 @@
         if (stopped) return;
         hud(); stopped = true; api.end(score, caught ? "John Nintendo caught you!" : "You out-ran John Nintendo!");
       }
+      function landing() {
+        const hard = fallPeak - y > 210;
+        vy = 0; jumps = 0; airDash = true; stomp = false; coyote = 0.10;
+        hardLand = hard ? 1 : 0; land = hard ? 0.17 : 0.10;
+        if (hard && !reduced) shake = Math.max(shake, 0.10);
+        puff(runnerX + lead, ground - y, WHITE, hard ? 15 : 7, false);
+        fallPeak = y;
+      }
       function update() {
-        previousDistance = distance; previousY = y; previousGap = gap;
+        previousDistance = distance; previousY = y; previousGap = gap; previousLead = lead;
+        previousCameraX = cameraX; previousCameraY = cameraY;
         const before = time; time = Math.min(LIMIT, ++ticks / 120);
         const dt = time - before;
         distance += (10 + Math.min(10, before / 10) + 10 + Math.min(10, time / 10)) * dt / 2 + 6 * Math.min(boost, dt);
         boost = Math.max(0, boost - dt); slide = Math.max(0, slide - dt);
         trip = Math.max(0, trip - dt); immunity = Math.max(0, immunity - dt);
         land = Math.max(0, land - dt); spin = Math.max(0, spin - dt); shake = Math.max(0, shake - dt);
-        coyote = y <= 0 ? 0.09 : Math.max(0, coyote - dt);
-        if (buffer > 0 && trip < 0.3 && caughtAt < 0 && !windup) {
-          if (coyote > 0 && jumps === 0) { windup = 0.0334; buffer = 0; slide = 0; }
-          else if (jumps < 2 && y > 0) {
-            vy = 470; jumps = 2; spin = 0.42; buffer = 0; slide = 0;
-            puff(runnerX, ground - y - 30, PINK, 12, true);
+        dashCooldown = Math.max(0, dashCooldown - dt);
+        const direction = (right ? 1 : 0) - (left ? 1 : 0) + padAxis;
+        nudge += (Math.max(-1, Math.min(1, direction)) - nudge) * Math.min(1, dt * 22);
+        // A quick, bounded brake/sprint around the auto-run position. Dash
+        // spends that local space in a burst and returns smoothly afterward.
+        const dashing = dash > 0;
+        if (dashing) lead = Math.min(120, lead + 620 * dt);
+        else {
+          const returnSpeed = Math.min(180, (10 + Math.min(10, time / 10) + (boost > 0 ? 6 : 0)) * PX * 0.55);
+          lead += Math.max(-returnSpeed * dt, Math.min(180 * dt, (nudge * 28 - lead) * dt * 16));
+        }
+        dash = Math.max(0, dash - dt);
+        if (support && (support.done || Math.abs((support.at - distance) * PX - lead) > (support.kind === "gate" ? 25 : 31))) support = null;
+        coyote = y <= 0 || support ? 0.10 : Math.max(0, coyote - dt);
+        if (buffer > 0 && trip < 0.3 && caughtAt < 0 && !dashing) {
+          if (coyote > 0 && jumps === 0) {
+            vy = JUMP; jumps = 1; coyote = 0; jumpAt = time; support = null;
+            buffer = slide = windup = 0; stomp = false;
+            puff(runnerX + lead, ground - y, WHITE, 5, false);
+          } else if (jumps < 2 && y > 0) {
+            vy = DOUBLE; jumps = 2; spin = 0.42; jumpAt = time;
+            buffer = slide = 0; stomp = false;
+            puff(runnerX + lead, ground - y - 30, PINK, 12, true);
           }
         }
         buffer = Math.max(0, buffer - dt);
-        if (windup > 0) {
-          windup -= dt;
-          if (windup <= 0) { windup = 0; vy = 525; jumps = 1; coyote = 0; jumpAt = time; puff(runnerX, ground, WHITE, 5, false); }
+        if (!support && (jumps > 0 || y > 0) && !dashing) {
+          // Even an immediate release gets a useful hop; held jumps retain
+          // the full impulse, a brief apex hang and a decisive fast fall.
+          if (!held() && vy > CUT) vy = CUT;
+          vy -= gravity(vy, held()) * dt; y += vy * dt;
+          fallPeak = Math.max(fallPeak, y);
+          if (y <= 0) { y = 0; landing(); }
         }
-        if (jumps > 0 || y > 0) {
-          // A clean release cut, quick rise/fall, and a small soft zone at the apex.
-          if (!held() && vy > 210) vy = 210;
-          const gravity = Math.abs(vy) < 80 && held() ? 1000 : vy > 0 ? 1550 : 1950;
-          vy -= gravity * dt; y += vy * dt;
-          if (y <= 0) { y = 0; vy = 0; jumps = 0; land = 0.1; puff(runnerX, ground, WHITE, 9, false); }
+        for (let i = afterimages.length - 1; i >= 0; i--) {
+          afterimages[i].life -= dt;
+          if (afterimages[i].life <= 0) afterimages.splice(i, 1);
         }
+        trailClock -= dt;
+        if (dashing && trailClock <= 0) {
+          trailClock = reduced ? 0.08 : 0.025;
+          afterimages.push({ at: distance + lead / PX, y: y, life: 0.18 });
+        }
+        cameraX += (16 + nudge * 5 + (dashing ? 10 : 0) - cameraX) * Math.min(1, dt * 5);
+        cameraY += (Math.max(0, y - 95) * 0.16 - cameraY) * Math.min(1, dt * 5);
         const bodyHeight = sliding() && y < 8 && !windup ? 29 : 83;
         for (let i = 0; i < objects.length; i++) {
           const o = objects[i]; if (o.done) continue;
-          const offset = (o.at - distance) * PX;
+          const offset = (o.at - distance) * PX - lead;
           if (o.kind === "news" || o.kind === "plush") {
-            if (previousDistance < o.at && distance >= o.at) {
+            if (previousDistance + previousLead / PX < o.at && distance + lead / PX >= o.at) {
               o.done = true;
               const high = o.kind === "news" ? 57 : 58;
               if (caughtAt < 0 && y <= high + 20 && y + bodyHeight >= high - 20) {
@@ -593,14 +702,36 @@
               } else if (o.kind === "news") streak = 0;
             }
           } else if (caughtAt < 0) {
-            const half = o.kind === "gate" ? 20 : 26;
-            const low = o.kind === "letter" ? 47 : 0, high = o.kind === "letter" ? 86 : o.kind === "gate" ? 105 : 51;
-            if (Math.abs(offset) < half + 12 && y + 5 < high && y + bodyHeight - 7 > low) {
-              o.done = true;
-              if (boost > 0) puff(runnerX + offset, ground - 40, "#c3afe5", 12, true);
-              else if (immunity <= 0) {
+            const half = o.kind === "gate" ? 14 : 20;
+            const low = o.kind === "letter" ? 52 : 0;
+            const high = o.kind === "letter" ? 82 : o.kind === "gate" ? 98 : 44;
+            const top = o.kind === "letter" ? 89 : o.kind === "gate" ? 113 : 57;
+            const overlap = Math.abs(offset) < half + 10;
+            // Swept feet/top crossing takes precedence over all side damage.
+            // The wider top surface is deliberate forgiveness around corners.
+            if (support !== o && Math.abs(offset) < half + 17 && vy <= 0 && previousY >= top - 3 && y <= top) {
+              y = top;
+              if (stomp) {
+                if (o.kind === "letter") o.done = true;
+                vy = JUMP; jumps = 1; airDash = true; dashCooldown = 0;
+                stomp = false; support = null; spin = 0; jumpAt = time; fallPeak = y;
+                puff(runnerX + lead, ground - top, PINK, 14, true);
+              } else { support = o; landing(); }
+              continue;
+            }
+            // A small rising / near-apex crate clip becomes a step-over.
+            if (o.kind === "crate" && overlap && y >= top - 20 && y < top && vy > -140 && !stomp) {
+              y = top + 1; vy = Math.max(0, vy); continue;
+            }
+            // Chamfer the upper corners instead of using the full art rectangle.
+            const cornerInset = Math.max(0, y + 5 - (high - 14)) * 0.5;
+            if (Math.abs(offset) < half + 10 - cornerInset && y + 5 < high && y + bodyHeight - 7 > low) {
+              if (boost > 0 || dashing) {
+                o.done = true; puff(runnerX + lead + offset, ground - 40, "#c3afe5", 12, true);
+              } else if (immunity <= 0) {
+                o.done = true;
                 gap = Math.max(0, gap - 50); trip = 0.9; immunity = 1.25; streak = 0; shake = 0.3;
-                puff(runnerX, ground - y - 8, WHITE, 10, false);
+                puff(runnerX + lead, ground - y - 8, WHITE, 10, false);
               }
             }
           }
@@ -659,9 +790,13 @@
         const dist = previousDistance + (distance - previousDistance) * alpha;
         const gy = previousY + (y - previousY) * alpha;
         const dg = previousGap + (gap - previousGap) * alpha;
+        const rx = runnerX + previousLead + (lead - previousLead) * alpha;
+        const cx = previousCameraX + (cameraX - previousCameraX) * alpha;
+        const cy = previousCameraY + (cameraY - previousCameraY) * alpha;
         drawing = reduced ? 0 : Math.floor(t * 20); mark = 0;
         ctx.setTransform(transform, 0, 0, transform, 0, 0);
         ctx.fillStyle = sky; ctx.fillRect(0, 0, width, height);
+        ctx.save(); ctx.translate(-cx, cy);
         // Distribute distant layers through the visible sky, including tall views.
         for (let i = 0; i < 18; i++) {
           const period = width + 80;
@@ -693,40 +828,57 @@
         if (!useSprites) john(johnX, ground, t, dg, catching);
         else if (!catching) sprite("jrun", runFrame, johnX,
           ground - (reduced ? 0 : Math.sin(t * 11) * 2), 0, false);
-        shadow(runnerX, ground, Math.max(13, 30 - gy * 0.07));
+        shadow(rx, ground, Math.max(13, 30 - gy * 0.07));
         let mode = t < 0.65 ? "idle" : "run", phase = 0;
         if (land > 0) mode = "land";
         if (windup > 0) mode = "anticipate";
-        if (y > 0) mode = spin > 0 ? "spin" : vy > 90 ? "rise" : vy < -90 ? "fall" : "apex";
+        if (y > 0 && !support) mode = spin > 0 ? "spin" : vy > 90 ? "rise" : vy < -90 ? "fall" : "apex";
         if (spin > 0) phase = 0.42 - spin;
         if (sliding() && gy < 8 && !windup) mode = "slide";
+        if (stomp) mode = "stomp";
+        if (dash > 0) mode = "dash";
         if (trip > 0) { mode = "trip"; phase = 0.9 - trip; }
         if (catching) mode = "caught";
         if (boost > 0) {
           for (let i = 0; i < 6; i++) {
-            const x = runnerX - 45 - i * 15;
+            const x = rx - 45 - i * 15;
             star(x, ground - gy - 20 - i % 3 * 19, 3 + (i % 2), i % 2 ? PINK : "#a68ac8");
             if (!reduced) line(x - 18, ground - gy - 32 - i * 8, x, ground - gy - 32 - i * 8, "#b4a7d6", 2);
           }
         }
+        for (let i = 0; i < afterimages.length; i++) {
+          const ghost = afterimages[i], gx = runnerX + (ghost.at - dist) * PX;
+          ctx.globalAlpha = ghost.life / 0.18 * (reduced ? 0.10 : 0.28);
+          if (useSprites) sprite(SPRITES.air2 && SPRITES.air2.ready ? "air2" : "run", SPRITES.air2 && SPRITES.air2.ready ? i % 2 : 1, gx, ground - ghost.y, 0.25, false);
+          else girl(gx, ground - ghost.y, t, "dash", 0, false, reduced, 16);
+        }
+        ctx.globalAlpha = 1;
         if (useSprites) {
           let sheet = "run", pose = runFrame;
-          if (windup > 0 || (y > 0 && t - jumpAt < 0.07)) { sheet = "jump"; pose = 0; }
-          else if (y > 0) {
+          if (windup > 0 || (y > 0 && !support && t - jumpAt < 0.07)) { sheet = "jump"; pose = 0; }
+          else if (y > 0 && !support) {
             sheet = "jump"; pose = vy > 90 ? 1 : vy < -90 ? 3 : 2;
           }
-          if (spin > 0.12 && y > 0) { sheet = "moves"; pose = Math.floor((0.42 - spin) * 12) % 2; }
+          if (spin > 0 && y > 0 && !support) { sheet = "moves"; pose = Math.floor((0.42 - spin) * 12) % 2; }
           if (sliding() && gy < 8 && !windup) { sheet = "moves"; pose = 2 + Math.floor(t * 6) % 2; }
+          let lean = boost > 0 && sheet === "run" ? -Math.PI / 30 : 0;
+          if (dash > 0 || stomp) {
+            const air = SPRITES.air2 && SPRITES.air2.ready;
+            sheet = air ? "air2" : dash > 0 ? "run" : "jump";
+            pose = air ? (dash > 0 ? 0 : 2) + Math.floor(t * 16) % 2 : dash > 0 ? 1 : 3;
+            lean = air ? 0 : dash > 0 ? 0.28 : -0.15;
+          }
           // Recovery is visual only: the trip and invulnerability clocks stay unchanged.
           if (immunity > 0) { sheet = "trip"; pose = Math.min(3, Math.floor((1.25 - immunity) * 4 / 1.25)); }
           if (catching) { sheet = "trip"; pose = 1; }
-          sprite(sheet, pose, runnerX, catching ? ground : ground - gy,
-            boost > 0 && sheet === "run" ? -Math.PI / 30 : 0,
-            sheet === "run" && land > 0.02);
+          ctx.save(); ctx.translate(rx, ground - gy - 55);
+          if (spin > 0 && !stomp && dash <= 0 && trip <= 0 && !catching) ctx.rotate(reduced ? -0.12 : -TAU * Math.min(1, (0.42 - spin) / 0.42));
+          if (land > 0) ctx.scale(1 + (hardLand ? 0.15 : 0.07) * land / 0.17, 1 - (hardLand ? 0.18 : 0.09) * land / 0.17);
+          sprite(sheet, pose, 0, 55, lean, false); ctx.restore();
           // Draw the reaching hands/stamp over the face-plant pose.
           if (catching) sprite("jgrab", grabFrame, johnX, ground, 0, false);
         } else {
-          girl(runnerX, ground - gy, t, mode, phase, boost > 0, reduced, 10 + Math.min(10, t / 10) + (boost > 0 ? 6 : 0));
+          girl(rx, ground - gy, t, mode, phase, boost > 0, reduced, 10 + Math.min(10, t / 10) + (boost > 0 ? 6 : 0));
         }
         for (let i = 0; i < particles.length; i++) {
           const p = particles[i]; if (p.life <= 0) continue;
@@ -734,10 +886,10 @@
           const x = p.px + (p.x - p.px) * alpha, py = p.py + (p.y - p.py) * alpha;
           if (p.star) star(x, py, 4, p.color); else oval(x, py, (0.7 - p.life) * 11, 3, p.color);
         }
-        ctx.globalAlpha = 1; ctx.restore();
+        ctx.globalAlpha = 1; ctx.restore(); ctx.restore();
         if (comboUntil > time) {
           const age = 1.1 - (comboUntil - time), scale = reduced ? 1 : 1 + Math.max(0, 0.18 - age) * 1.2;
-          ctx.save(); ctx.translate(runnerX + 55, ground - gy - 132); ctx.scale(scale, scale);
+          ctx.save(); ctx.translate(rx + 55 - cx, ground - gy - 132 + cy); ctx.scale(scale, scale);
           label("+" + (25 + bonus) + (streak > 1 ? "  x" + Math.min(3, streak) : "  POP!"), 0, 0, 20, "#b93970");
           if (streak > 1) label("streak bonus +" + bonus, 0, 16, 10, NAVY);
           ctx.restore();
@@ -772,9 +924,9 @@
         if (caughtAt >= 0) label("THE LONG ARM OF JOHN!", uiWidth / 2, uiHeight - 30, 17, NAVY);
         else if (showHint && time < 3) {
           box(12, uiHeight - 67, uiWidth - 24, 54, WHITE, 9);
-          label("↑ SPACE / W / TAP UPPER AREA: JUMP + DOUBLE JUMP", uiWidth / 2, uiHeight - 45, 11);
-          label("↓ HOLD S / DOWN: SLIDE · TAP LOWER AREA / SWIPE ↓", uiWidth / 2, uiHeight - 25, 11);
-        } else label("↑ JUMP / DOUBLE JUMP     ·     ↓ SLIDE     ·     BG = NEWS", uiWidth / 2, uiHeight - 20, 11, NAVY);
+          label("UPPER TAP / ↑: JUMP ×2 · HOLD FOR HEIGHT", uiWidth / 2, uiHeight - 45, 11);
+          label("LOWER TAP / ↓: POGO · X / SWIPE →: DASH", uiWidth / 2, uiHeight - 25, 11);
+        } else label("↑ JUMP ×2 · ↓ SLIDE / POGO · X DASH · ←→ BRAKE / SPRINT", uiWidth / 2, uiHeight - 20, 11, NAVY);
       }
       function loop(now) {
         if (stopped) return;

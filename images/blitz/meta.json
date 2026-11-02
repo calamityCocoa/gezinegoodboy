@@ -36,6 +36,12 @@
    "h": 507,
    "anchorX": 294.5,
    "groundY": 501.7
+  },
+  "air2": {
+   "w": 367,
+   "h": 412,
+   "anchorX": 182.5,
+   "groundY": 408.0
   }
  },
  "note": "Each sheet: 4 frames (0-3) of w x h px. Draw a frame so that (anchorX, groundY) in the image lands on the character position on the ground; frames in a sheet share one anchor so jumps keep their height. gezineHeight = her running height in these pixels."
