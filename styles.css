@@ -87,10 +87,13 @@ body.bad .verdict { color: #c62828; color: var(--red); }
 #gez img { display: block; width: 100%; height: auto; transform-origin: 50% 100%; }
 #john-img { position: absolute; top: 0; left: 0; width: 100%; height: auto; }
 
-body.good #gezine-img { animation: bob 1.64s ease-in-out infinite; }
-body.good #gezine-img.patting { animation: squish 1.46s ease-in-out 1; }
-body.good #gezine-img.gaming { animation: bounce .6s ease-in-out infinite; }
-body.bad #gezine-img { animation: tremble .41s linear infinite; }
+/* the motion lives on a wrapper so the crossfading old frame moves with the new one */
+.gez-anim { position: relative; transform-origin: 50% 100%; will-change: transform; }
+body.good .gez-anim { animation: bob 1.64s ease-in-out infinite; }
+body.good .gez-anim.patting { animation: squish 1.46s ease-in-out 1; }
+body.good .gez-anim.gaming { animation: bounce .6s ease-in-out infinite; }
+body.bad .gez-anim { animation: tremble .41s ease-in-out infinite; }
+.frame-ghost { position: absolute; left: 0; top: 0; width: 100%; height: auto; pointer-events: none; opacity: 0; }
 @keyframes bob { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-6px) scale(.99, 1.015); } }
 @keyframes squish {
   0% { transform: scale(1, 1); } 15% { transform: scale(1.03, .95); } 40% { transform: scale(1.06, .9); }
@@ -275,7 +278,7 @@ footer p { margin: 4px 0; }
 .eink *, .eink *::before, .eink *::after { animation: none !important; transition: none !important; box-shadow: none !important; }
 .eink body, .eink html { background: #fff; }
 @media (prefers-reduced-motion: reduce) {
-  #gezine-img, .disc.spin { animation: none !important; }
+  .gez-anim, .disc.spin { animation: none !important; }
   #gez { transition: none !important; }
   html { scroll-behavior: auto; }
 }
@@ -284,7 +287,7 @@ footer p { margin: 4px 0; }
 .legacy-only { display: none; }
 .legacy .legacy-only { display: block; }
 .legacy .modern-only { display: none !important; }
-.legacy #gezine-img { animation: none !important; }
+.legacy .gez-anim { animation: none !important; }
 .legacy .topbar { position: static; }
 
 /* =====================================================================
@@ -356,3 +359,27 @@ footer { color: #8a6d80; }
 .pc-msg { min-height: 1.2em; font-size: .9em; color: #2e7d32; }
 @media (prefers-reduced-motion: reduce) { .ev-pill, .ev-happyhour #mood-btn { animation: none; } }
 .legacy .hero-art::before, .legacy .hero-art::after { display: none; }
+
+/* =====================================================================
+   fluid motion: smooth ticker, cards gliding in, gentle hovers
+   ===================================================================== */
+.ticker { overflow: hidden; white-space: nowrap; }
+.ticker-track { display: inline-flex; width: max-content; animation: ticker-roll 60s linear infinite; will-change: transform; }
+.ticker-track span { padding-right: 4em; }
+.ticker:hover .ticker-track { animation-play-state: paused; }
+@keyframes ticker-roll { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-50%, 0, 0); } }
+html.reveal main > .card, html.reveal main > section { opacity: 0; transform: translate3d(0, 22px, 0) scale(.985);
+  transition: opacity .7s cubic-bezier(.2, .8, .2, 1), transform .8s cubic-bezier(.2, .8, .2, 1); }
+html.reveal main > .in { opacity: 1; transform: none; }
+.game-card, .credits li, .stat, .ev-now { transition: transform .35s cubic-bezier(.2, .8, .2, 1), box-shadow .35s ease; }
+.game-card:hover, .credits li:hover { transform: translate3d(0, -4px, 0); box-shadow: 0 10px 24px rgba(181, 140, 242, .18); }
+.stat:hover { transform: translate3d(0, -2px, 0) scale(1.02); }
+.btn { transition: transform .18s cubic-bezier(.3, 1.6, .5, 1), box-shadow .18s ease, background .25s ease; }
+.ev-bar span { transition: width 1.2s cubic-bezier(.2, .8, .2, 1); }
+#stage, .bubble { transition: box-shadow .4s ease; }
+#gez { transition: transform 1.1s cubic-bezier(.65, 0, .35, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track { animation-duration: 140s !important; }
+  html.reveal main > .card, html.reveal main > section { transform: none; transition: opacity .4s ease; }
+  .game-card:hover, .credits li:hover, .stat:hover { transform: none; }
+}

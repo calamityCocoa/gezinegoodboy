@@ -139,6 +139,18 @@
     // and a line in the breaking news ticker
     var m = document.getElementsByTagName("marquee")[0];
     if (m) m.appendChild(document.createTextNode(" \u2022\u2022\u2022 BREAKING: gezine has been spotted on " + name + " \u2022\u2022\u2022"));
+    // <marquee> moves in jerky steps, so modern browsers get a smooth CSS ticker instead
+    if (m && !legacy && m.textContent) {
+      var text = m.textContent, track = document.createElement("div"), a = document.createElement("span"), b2 = document.createElement("span");
+      track.className = "ticker-track";
+      a.appendChild(document.createTextNode(text));
+      b2.appendChild(document.createTextNode(text));
+      b2.setAttribute("aria-hidden", "true");
+      track.appendChild(a); track.appendChild(b2);
+      m.parentNode.replaceChild(track, m);
+      // a steady ~70px per second, however long the text is
+      track.style.animationDuration = Math.max(20, Math.round(a.offsetWidth / 70)) + "s";
+    }
   }
   if (document.readyState === "loading" || document.readyState === "uninitialized") {
     if (document.addEventListener) document.addEventListener("DOMContentLoaded", fill, false);

@@ -88,6 +88,29 @@ lead developer the maximum points per second a perfect player could earn.
 11. A round should last 30 seconds to 5 minutes. Make it fun, cute and readable.
 12. Only edit `games/<id>.js` and add images under `images/<id>/`. Do not touch other files.
 
+## Fluid motion (hard requirement: "smooth as water")
+
+The owner wants EVERY animation to be perfectly fluid. Drawn sprite sheets only have a few frames,
+so fluidity has to come from continuous motion on top of them:
+
+1. One `requestAnimationFrame` loop driven by real elapsed time (performance.now / rAF timestamp).
+   Never move things in steps from `setInterval`/`setTimeout`; use timers only for game logic, not motion.
+2. Every on-screen position, scale, rotation and opacity changes continuously and is EASED
+   (ease-out for arrivals, ease-in-out for loops, springs/overshoot for pops). Nothing teleports or snaps:
+   if something must appear/disappear, fade/scale it over 80-200ms.
+3. Characters always have secondary motion at 60fps, layered over the sprite frames: idle breathing
+   (scale y 1 +/- 1.5%), a body bob tied to the run/walk cycle, a lean into the direction of movement,
+   squash on landing, stretch on take-off, a slight overshoot when they stop.
+4. When a sprite frame changes, CROSSFADE from the old frame to the new one over about 60-90ms
+   (draw both, old with decreasing alpha), unless the change is a deliberate impact frame.
+5. Physics on a fixed timestep must be RENDERED INTERPOLATED between the last two steps.
+6. Cap the per-frame delta (e.g. 50ms) so tab switches don't cause jumps; no layout thrashing; animate
+   with transforms/opacity in the DOM (never top/left/width) and `will-change` sparingly.
+7. UI also flows: buttons ease on hover/press, score numbers count up smoothly, banners/panels slide or
+   fade with easing, progress bars animate their width/transform.
+8. 60fps on a mid-range phone; if `prefers-reduced-motion` is set, keep motion gentle (no shake,
+   smaller bobs, shorter distances) but still smooth.
+
 ## Testing it yourself
 
 `python3 -m http.server 8000` in the repo root, open `http://localhost:8000/?play=<id>`

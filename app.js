@@ -14,6 +14,28 @@ function safePlay(media, onFail) {
 const $ = (id) => document.getElementById(id);
 function show(id, text) { const el = $(id); if (el) el.textContent = text; }
 
+// Frame changes crossfade instead of snapping: the old frame fades out on top of the new one.
+function swapFrame(el, src) {
+  if (!el || el.getAttribute("src") === src) return;
+  let ghost = el._ghost;
+  if (!ghost) {
+    ghost = document.createElement("img");
+    ghost.className = "frame-ghost";
+    ghost.alt = "";
+    ghost.setAttribute("aria-hidden", "true");
+    el.parentNode.insertBefore(ghost, el.nextSibling);
+    el._ghost = ghost;
+  }
+  ghost.hidden = el.hidden;
+  ghost.style.transition = "none";
+  ghost.style.opacity = "1";
+  ghost.src = el.getAttribute("src");
+  el.src = src;
+  void ghost.offsetWidth; // start the fade from fully visible
+  ghost.style.transition = "opacity 110ms ease-out";
+  ghost.style.opacity = "0";
+}
+
 function main() {
 // the backend lives in api/gezine.js on the same Vercel site
 const API_URL = "/api/gezine";
@@ -157,15 +179,15 @@ let gezTimer, busy = false, holding = false;
 // play each step once, in order, then loop `loop` forever. onDone runs when the steps finish.
 function play(steps, loop, onDone) {
   clearTimeout(gezTimer);
-  const img = $("gezine-img");
+  const img = $("gezine-img"), anim = $("gez-anim");
   const seq = steps.map((n) => ANIMS[n]);
   let s = 0, i = 0;
   busy = seq.length > 0;
 
   const begin = (a) => {
-    img.classList.remove("patting", "gaming");
-    void img.offsetWidth; // restarts the squish if headpats are spammed
-    if (a.cls) img.classList.add(a.cls);
+    anim.classList.remove("patting", "gaming");
+    void anim.offsetWidth; // restarts the squish if headpats are spammed
+    if (a.cls) anim.classList.add(a.cls);
     if (a.holds) holding = true;
   };
   begin(seq[0] || ANIMS[loop]);
@@ -180,7 +202,7 @@ function play(steps, loop, onDone) {
     if (s >= seq.length) busy = false;
     const a = seq[s] || ANIMS[loop];
     if (i >= a.frames.length) i = 0;
-    img.src = a.frames[i];
+    swapFrame(img, a.frames[i]);
     gezTimer = setTimeout(step, a.ms[i]);
     i++;
   };
@@ -195,7 +217,7 @@ function johnPlay(name, then) {
   let i = 0;
   const step = () => {
     if (i >= a.frames.length) return then === "loop" ? johnPlay("loop", "loop") : then();
-    $("john-img").src = a.frames[i];
+    swapFrame($("john-img"), a.frames[i]);
     johnTimer = setTimeout(step, a.ms[i]);
     i++;
   };
@@ -436,7 +458,24 @@ function asmrPlayer() {
   render();
 }
 
+// sections glide in as they scroll into view
+function revealOnScroll() {
+  if (!("IntersectionObserver" in window)) return;
+  const root = document.documentElement;
+  root.classList.add("reveal");
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
+  }, { rootMargin: "0px 0px -8% 0px", threshold: 0.06 });
+  [].forEach.call(document.querySelectorAll("main > .card, main > section"), (el) => io.observe(el));
+  // anything still hidden after a while (e.g. very tall screens) just appears
+  setTimeout(() => [].forEach.call(document.querySelectorAll("main > .card, main > section"), (el) => {
+    const r = el.getBoundingClientRect();
+    if (r.top < innerHeight) el.classList.add("in");
+  }), 1200);
+}
+
 if (!DEVICE.legacy) {
+  revealOnScroll();
   main();
   asmrPlayer();
 }
