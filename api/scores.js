@@ -24,7 +24,7 @@ const GAMES = {
   // plug-in games (games/*.js); limits from their authors' notes
   blitz: { board: "gez:lb:blitz", perSecond: 30, minSeconds: 25, max: 1_500 }, // rounds 30-180s, about 28 pts/s at best
   empires: { board: "gez:lb:empires", perSecond: 90, minSeconds: 25, max: 2_500 }, // capped at 2,500
-  rush: { board: "gez:lb:rush", perSecond: 150, minSeconds: 5, max: 1_000_000 }, // Good Boy Rush (limits checked when it lands)
+  rush: { board: "gez:lb:rush", perSecond: 110, minSeconds: 25, max: 6_000 }, // Good Boy Rush: capped at 6,000
   lullaby: { board: "gez:lb:lullaby", perSecond: 200, minSeconds: 70, max: 9_000 }, // round is 78s, perfect = 9,000
 };
 const TOP_N = 10;
