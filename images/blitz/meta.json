@@ -1,0 +1,42 @@
+{
+ "gezineHeight": 280,
+ "sheets": {
+  "run": {
+   "w": 298,
+   "h": 292,
+   "anchorX": 158.5,
+   "groundY": 288.1
+  },
+  "jump": {
+   "w": 270,
+   "h": 334,
+   "anchorX": 135.5,
+   "groundY": 330.2
+  },
+  "moves": {
+   "w": 353,
+   "h": 290,
+   "anchorX": 204.5,
+   "groundY": 285.7
+  },
+  "trip": {
+   "w": 342,
+   "h": 300,
+   "anchorX": 180.0,
+   "groundY": 296.2
+  },
+  "jrun": {
+   "w": 537,
+   "h": 392,
+   "anchorX": 329.0,
+   "groundY": 385.2
+  },
+  "jgrab": {
+   "w": 496,
+   "h": 507,
+   "anchorX": 294.5,
+   "groundY": 501.7
+  }
+ },
+ "note": "Each sheet: 4 frames (0-3) of w x h px. Draw a frame so that (anchorX, groundY) in the image lands on the character position on the ground; frames in a sheet share one anchor so jumps keep their height. gezineHeight = her running height in these pixels."
+}
