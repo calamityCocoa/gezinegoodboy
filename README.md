@@ -7,6 +7,8 @@ Is gezine being a good boy? A satire site: https://gezinegoodboy.vercel.app
 - `app.js`: the main page code (modern browsers, including the Switch 1's)
 - `legacy.js`: a lighter "classic" page for old browsers (3DS, Wii U, Vita, Kindle). Preview it with `?classic=1`
 - `game.js`: DMCA Dodge (when she loses, John Nintendo turns up).
+- Direct links to each game: `/play/dodge`, `/play/clicker`, `/play/typer`, `/play/whack`, `/play/match`, `/play/combo`
+  (vercel.json redirects them to `/?play=<game>`).
 - `arcade.js`: gezine's Arcade: the game menu, a shared game window, and Headpat Clicker, Bootstrap Typer,
   Whack-a-John, Pose Match and Combo Says. The lines that bury her when you lose are pepsipu's real
   [bootstrap.bas](https://gitlab.com/pepsipu/ns2jb/-/blob/main/bootstrap.bas), fetched live from GitLab (not copied here).

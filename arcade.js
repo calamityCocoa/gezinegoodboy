@@ -26,7 +26,7 @@
       blurb: "Catch notes and SmileBASIC tokens in her headset, dodge the DMCA letters. Lose and John Nintendo turns up with the bootstrap.bas." },
     { id: "clicker", title: "Headpat Clicker", art: "images/pat/2.png", board: false, unit: "headpats",
       blurb: "Pat gezine, buy upgrades, pat harder. Every pat you give by hand counts towards everyone's headpats." },
-    { id: "typer", title: "Bootstrap Typer", art: "images/game/1.png", board: true, unit: "characters",
+    { id: "typer", title: "Bootstrap Typer", art: "images/peek/pepsipu.png", board: true, unit: "characters",
       blurb: "Type pepsipu's real bootstrap.bas as fast as you can. 60 seconds on the clock." },
     { id: "whack", title: "Whack-a-John", art: "images/arcade/john-head.png", board: true, unit: "bonks",
       blurb: "John Nintendo keeps popping out of gezine's hut. Bonk him. Do not bonk gezine." },
@@ -90,15 +90,71 @@
   const CODE_URL = "https://gitlab.com/api/v4/projects/pepsipu%2Fns2jb/repository/files/bootstrap.bas/raw?ref=main";
   const PRACTICE = ['PRINT "GOOD BOY"', "VAR HEADPATS=0", "FOR I=1 TO 30:NEXT", 'IF DMCA THEN PRINT "RUN"', "VSYNC 1", "WAIT 60"];
   let codeLines = null;
+  // every line of the file with its real line number; "typeable" ones are the ones you type
+  const toLines = (arr) => arr.map((raw, i) => {
+    const text = raw.replace(/\s+$/, "").replace(/^\s+/, "");
+    const indent = raw.length - raw.replace(/^\s+/, "").length;
+    return { n: i + 1, indent: Math.min(indent, 8), text, typeable: text.length >= 2 && text.length <= 52 && text[0] !== "'" && !/^REM\b/i.test(text) };
+  });
   function loadCode() {
     if (!codeLines) codeLines = fetch(CODE_URL)
       .then((r) => (r.ok ? r.text() : Promise.reject(new Error(r.status))))
       .then((t) => {
-        const lines = t.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length >= 6 && l.length <= 44 && l[0] !== "'");
-        return lines.length > 20 ? { lines, real: true } : { lines: PRACTICE, real: false };
+        const lines = toLines(t.replace(/\t/g, " ").split(/\r?\n/));
+        return lines.filter((l) => l.typeable).length > 20 ? { lines, real: true } : { lines: toLines(PRACTICE), real: false };
       })
-      .catch(() => ({ lines: PRACTICE, real: false }));
+      .catch(() => ({ lines: toLines(PRACTICE), real: false }));
     return codeLines;
+  }
+
+  // SmileBASIC syntax colours (in the spirit of the SmileBASIC 4 editor)
+  const SB_KEYWORDS = new Set(("VAR DEF END IF THEN ELSE ELSEIF ENDIF FOR TO STEP NEXT WHILE WEND REPEAT UNTIL RETURN PRINT COMMON " +
+    "GOTO GOSUB ON BREAK CONTINUE AND OR NOT MOD DIV XOR CALL DIM OUT EXEC USE STOP INPUT LINPUT DATA READ RESTORE SWAP " +
+    "INC DEC CLS LOCATE COLOR VSYNC WAIT OPTION STRICT DEFINT TRUE FALSE CASE WHEN OTHERWISE ENDCASE LOOP ENDLOOP").split(" "));
+  function sbColors(s) {
+    const out = [];
+    for (let k = 0; k < s.length; k++) out.push("tx");
+    const set = (a, b, c) => { for (let k = a; k < b && k < s.length; k++) out[k] = c; };
+    let i = 0;
+    while (i < s.length) {
+      const c = s[i], nx = s[i + 1] || "";
+      if (c === "'") { set(i, s.length, "cm"); break; }
+      if (c === '"') { let j = i + 1; while (j < s.length && s[j] !== '"') j++; set(i, j + 1, "st"); i = j + 1; continue; }
+      if (c === "&" && /[HBhb]/.test(nx)) { let j = i + 2; while (j < s.length && /[0-9A-Fa-f]/.test(s[j])) j++; set(i, j, "nu"); i = j; continue; }
+      if (/[0-9]/.test(c) || (c === "." && /[0-9]/.test(nx))) { let j = i; while (j < s.length && /[0-9.]/.test(s[j])) j++; set(i, j, "nu"); i = j; continue; }
+      if (c === "@") { let j = i + 1; while (j < s.length && /[A-Za-z0-9_]/.test(s[j])) j++; set(i, j, "lb"); i = j; continue; }
+      if (/[A-Za-z_]/.test(c)) {
+        let j = i; while (j < s.length && /[A-Za-z0-9_]/.test(s[j])) j++;
+        const word = s.slice(i, j).toUpperCase();
+        if (/[#$%]/.test(s[j] || "")) j++;
+        if (word === "REM") { set(i, s.length, "cm"); break; }
+        set(i, j, SB_KEYWORDS.has(word) ? "kw" : s[j] === "(" ? "fn" : "tx");
+        i = j; continue;
+      }
+      if (/[=<>+\-*\/!:,;()[\]]/.test(c)) out[i] = "op";
+      i++;
+    }
+    return out;
+  }
+
+  // ---------------------------------------------------------------- direct links
+  // Every game has its own link, gezinegoodboy.vercel.app/play/<game> (vercel.json sends that
+  // to /?play=<game>). While a game is open, the address bar shows its link too.
+  const linkFor = (id) => location.protocol + "//" + location.host + "/play/" + id;
+  function setPlayParam(id) {
+    if (!window.history || !history.replaceState) return;
+    try {
+      const params = new URLSearchParams(location.search);
+      if (id) params.set("play", id); else params.delete("play");
+      const q = params.toString();
+      history.replaceState(null, "", location.pathname + (q ? "?" + q : "") + location.hash);
+    } catch (e) {}
+  }
+  function copyLink(id, btn) {
+    const url = linkFor(id);
+    const done = () => { if (btn) { const old = btn.textContent; btn.textContent = "Link copied!"; setTimeout(() => { btn.textContent = old; }, 1600); } };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, () => window.prompt("Copy this link:", url));
+    else window.prompt("Copy this link:", url); // older browsers, like the Switch's
   }
 
   // ---------------------------------------------------------------- the game window
@@ -156,13 +212,33 @@
   .ck-up span { font-size: .85em; color: #5b6275; }
   .ck-up em { float: right; font-style: normal; font-weight: 800; }
 
-  /* typer */
-  .ty { width: 720px; text-align: center; }
-  .ty-line { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 1.35em; background: #141a2b; color: #6b7390; padding: 16px; border-radius: 14px;
-             text-align: left; word-break: break-all; min-height: 2.6em; }
-  .ty-line .ok { color: #8bd17c; } .ty-line .bad { color: #fff; background: #c62828; border-radius: 3px; } .ty-line .cur { color: #fff; border-bottom: 2px solid #f06292; }
-  .ty input { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 18px; width: 100%; box-sizing: border-box; margin-top: 12px; padding: 12px; border-radius: 12px; border: 2px solid #141a2b; }
-  .ty-next { font-family: ui-monospace, Menlo, Consolas, monospace; color: #8a90a2; margin-top: 10px; font-size: .95em; text-align: left; word-break: break-all; }
+  /* typer: a SmileBASIC 4 style editor */
+  .ty { width: 760px; }
+  .sb { background: #0b0f2a; border-radius: 12px; overflow: hidden; border: 3px solid #2b3270; box-shadow: 0 8px 30px rgba(11,15,42,.35);
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; font-weight: 600; letter-spacing: .02em; }
+  .sb-tabs { display: flex; gap: 2px; background: #1a2054; padding: 4px 6px 0; font-size: 12px; }
+  .sb-tab { padding: 4px 12px; color: #8c95d4; border-radius: 6px 6px 0 0; }
+  .sb-tab.on { background: #0b0f2a; color: #fff; }
+  .sb-body { padding: 8px 0; font-size: 15px; font-size: clamp(10px, 2.45vw, 16px); line-height: 1.65; }
+  .sb-row { display: flex; white-space: pre; overflow: hidden; }
+  .sb-row .ln { flex: none; width: 4.6em; padding-right: .8em; text-align: right; color: #4b5596; background: #10153a; margin-right: .6em; }
+  .sb-row .code { overflow: hidden; text-overflow: ellipsis; }
+  .sb-row.cur { background: #1b2366; }
+  .sb-row.cur .ln { color: #ffe066; background: #232c7a; }
+  .sb-row.prev { opacity: .5; }
+  .sb-row.skip .code { opacity: .55; }
+  .sb .tx { color: #f2f2f8; } .sb .kw { color: #4fd6ff; } .sb .fn { color: #9fe3ff; } .sb .st { color: #ff8ad8; }
+  .sb .nu { color: #ffb35c; } .sb .cm { color: #6fdc74; } .sb .lb { color: #ffe066; } .sb .op { color: #c3c6e0; }
+  .sb .todo { opacity: .38; }
+  .sb .bad { background: #e53935; color: #fff !important; border-radius: 2px; opacity: 1; }
+  .sb .caret { position: relative; opacity: .38; }
+  .sb .caret::after { content: ""; position: absolute; left: 0; right: 0; bottom: 1px; height: 3px; background: #fff; animation: sb-blink 1s steps(1) infinite; }
+  @keyframes sb-blink { 50% { opacity: 0; } }
+  .sb-status { display: flex; justify-content: space-between; gap: 10px; background: #1a2054; color: #8c95d4; font-size: 12px; padding: 5px 10px; }
+  .ty-cmd { display: flex; align-items: center; gap: 8px; margin-top: 12px; background: #0b0f2a; border: 3px solid #2b3270; border-radius: 12px; padding: 4px 12px; }
+  .ty-cmd span { color: #ffe066; font: 700 18px ui-monospace, Menlo, Consolas, monospace; }
+  .ty-cmd input { flex: 1; min-width: 0; background: transparent; border: 0; color: #fff; font: 600 18px ui-monospace, Menlo, Consolas, monospace; padding: 10px 0; outline: none; }
+  .ty-src { text-align: center; margin: 8px 0 0; }
 
   /* whack */
   .wk { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: min(520px, 92vw); }
@@ -288,7 +364,7 @@
       "<h2>" + esc(g.title) + "</h2><p>" + esc(g.blurb) + "</p><p><small>" + esc(controls(g)) + "</small></p>" +
       (best ? "<p>Your best: <b>" + best.toLocaleString() + "</b></p>" : "") +
       (g.board ? '<div class="ar-top"><p><small>Loading the leaderboard...</small></p></div>' : ""),
-      [["Play", start, true], ["Back to the arcade", close]]);
+      [["Play", start, true], ["Copy link", (e) => copyLink(g.id, e.target), false], ["Back to the arcade", close]]);
     if (g.board) renderBoard(panel.querySelector(".ar-top"), g.id, 5, store.get("headset-name"));
   }
 
@@ -358,6 +434,7 @@
   function open(id) {
     const g = byId[id];
     if (!g) return;
+    setPlayParam(id);
     if (id === "dodge") { if (window.HeadsetHero) window.HeadsetHero.open(); return; }
     build();
     lastFocus = document.activeElement;
@@ -379,6 +456,7 @@
     panel.hidden = true;
     document.documentElement.style.overflow = "";
     if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
+    setPlayParam(null);
     refreshPage();
   }
 
@@ -469,57 +547,87 @@
 
   // ================================================================ Bootstrap Typer
   IMPL.typer = (a) => {
-    const SECONDS = 60;
-    a.stage.innerHTML = '<div class="ty"><div class="ty-line" aria-live="polite">Loading pepsipu\'s bootstrap.bas...</div>' +
-      '<input type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Type the line here">' +
-      '<div class="ty-next"></div><p class="ty-src"><small></small></p></div>';
-    const lineEl = a.stage.querySelector(".ty-line"), input = a.stage.querySelector("input"), nextEl = a.stage.querySelector(".ty-next"),
-      src = a.stage.querySelector(".ty-src small");
+    const SECONDS = 60, BEFORE = 3, AFTER = 6;
+    a.stage.innerHTML = '<div class="ty"><div class="sb"><div class="sb-tabs"><span class="sb-tab on">SLOT 0: BOOTSTRAP.BAS</span><span class="sb-tab">DIRECT</span></div>' +
+      '<div class="sb-body" aria-live="polite"><div class="sb-row cur"><span class="ln"></span><span class="code">LOADING...</span></div></div>' +
+      '<div class="sb-status"><span class="pos"></span><span class="clock">60s</span></div></div>' +
+      '<label class="ty-cmd"><span>&gt;</span><input type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Type the highlighted line here"></label>' +
+      '<p class="ty-src"><small></small></p></div>';
+    const body = a.stage.querySelector(".sb-body"), input = a.stage.querySelector("input"),
+      pos = a.stage.querySelector(".pos"), clock = a.stage.querySelector(".clock"), src = a.stage.querySelector(".ty-src small");
     input.focus(); // focus now, while we're still inside the click, so phones show the keyboard
     input.onpaste = (e) => e.preventDefault();
-    let lines = PRACTICE, idx = 0, target = "", best = 0, score = 0, typedOk = 0, left = SECONDS, started = false;
+    let lines = toLines(PRACTICE), cur = 0, best = 0, score = 0, typedOk = 0, left = SECONDS, started = false, ready = false;
+
     loadCode().then((c) => {
       lines = c.lines;
-      idx = Math.floor(Math.random() * lines.length);
-      src.textContent = c.real ? "Lines from pepsipu's bootstrap.bas (ns2jb)." : "Practice lines (couldn't reach GitLab).";
-      next();
-    });
-    function next() {
-      target = lines[idx % lines.length]; idx++;
+      src.textContent = c.real ? "Lines from pepsipu's bootstrap.bas (ns2jb). Capitals don't matter." : "Practice lines (couldn't reach GitLab).";
+      // start somewhere random, on a line you can type
+      const starts = lines.map((l, i) => (l.typeable ? i : -1)).filter((i) => i >= 0);
+      cur = starts[Math.floor(Math.random() * starts.length)];
+      ready = true;
       best = 0; input.value = "";
-      nextEl.textContent = "next: " + lines[idx % lines.length];
       draw();
+    });
+
+    function nextTypeable(from) {
+      for (let k = 1; k <= lines.length; k++) { const i = (from + k) % lines.length; if (lines[i].typeable) return i; }
+      return from;
+    }
+    function okCount(v, t) { let ok = 0; while (ok < v.length && ok < t.length && v[ok].toUpperCase() === t[ok].toUpperCase()) ok++; return ok; }
+    function rowHTML(l, cls, typed) {
+      const pad = " ".repeat(l.indent);
+      const colors = sbColors(l.text);
+      let html = "";
+      for (let k = 0; k < l.text.length; k++) {
+        let c = colors[k];
+        if (typed) {
+          if (k < typed.ok) {} // typed correctly: full colour
+          else if (k < typed.v.length) c += " bad";
+          else if (k === typed.v.length) c += " caret";
+          else c += " todo";
+        }
+        html += '<span class="' + c + '">' + esc(l.text[k]) + "</span>";
+      }
+      if (typed && typed.v.length >= l.text.length && typed.ok < l.text.length) html += '<span class="bad"> </span>';
+      return '<div class="sb-row ' + cls + (l.typeable || cls === "cur" ? "" : " skip") + '"><span class="ln">' + l.n + '</span><span class="code">' + pad + html + "</span></div>";
     }
     function draw() {
-      const v = input.value;
-      let ok = 0;
-      while (ok < v.length && ok < target.length && v[ok].toUpperCase() === target[ok].toUpperCase()) ok++;
+      if (!ready) return 0;
+      const l = lines[cur], v = input.value, ok = okCount(v, l.text);
       let html = "";
-      for (let i = 0; i < target.length; i++) {
-        const ch = esc(target[i]);
-        if (i < ok) html += '<span class="ok">' + ch + "</span>";
-        else if (i < v.length) html += '<span class="bad">' + ch + "</span>";
-        else if (i === v.length) html += '<span class="cur">' + ch + "</span>";
-        else html += ch;
+      for (let k = BEFORE; k >= 1; k--) { const i = cur - k; if (i >= 0) html += rowHTML(lines[i], "prev"); }
+      html += rowHTML(l, "cur", { v, ok });
+      for (let k = 1; k <= AFTER; k++) {
+        const i = cur + k;
+        if (i >= lines.length) break;
+        html += rowHTML(lines[i], "next").replace('class="sb-row next', 'style="opacity:' + (0.62 - k * 0.08).toFixed(2) + '" class="sb-row next');
       }
-      lineEl.innerHTML = html;
+      body.innerHTML = html;
+      pos.textContent = "LINE " + l.n + "  COL " + (Math.min(v.length, l.text.length) + 1 + l.indent);
       return ok;
     }
     input.oninput = () => {
-      if (left <= 0 || !target) return;
+      if (left <= 0 || !ready) return;
       if (!started) { started = true; tick(); }
-      const ok = draw();
+      const t = lines[cur].text, ok = draw();
       if (ok > best) { score += ok - best; typedOk += ok - best; best = ok; }
-      if (ok === target.length) { score += 5; a.pop(a.stage.clientWidth / 2, 60, "+5 line!", "#2e7d32"); next(); }
+      if (ok === t.length) {
+        score += 5;
+        a.pop(a.stage.clientWidth / 2, 40, "+5 line " + lines[cur].n + "!", "#2e7d32");
+        cur = nextTypeable(cur);
+        best = 0; input.value = "";
+        draw();
+      }
       a.score(score + " pts");
     };
     function tick() {
-      a.status(left + "s");
       a.every(1000, () => {
         left--;
         const elapsed = SECONDS - left;
         const wpm = Math.round((typedOk / 5) / (elapsed / 60));
-        a.status(left + "s" + (elapsed >= 5 ? " · " + wpm + " wpm" : "")); // too jumpy to show before 5 seconds
+        clock.textContent = left + "s" + (elapsed >= 5 ? "  " + wpm + " WPM" : "");
+        a.status(left + "s");
         if (left <= 0) { input.blur(); a.end(score, wpm + " words a minute"); }
       });
     }
@@ -711,12 +819,14 @@
       '<div class="game-art"><img src="' + g.art + '" alt="" loading="lazy"></div>' +
       '<div class="game-body"><h3>' + esc(g.title) + "</h3><p>" + esc(g.blurb) + "</p>" +
       '<p class="game-meta">' + extra + (best ? "<br>Your best: " + best.toLocaleString() : "") + "</p>" +
-      '<button class="btn btn-main" type="button" data-game="' + g.id + '">Play</button></div></article>';
+      '<button class="btn btn-main" type="button" data-game="' + g.id + '">Play</button>' +
+      '<a class="game-link" href="/play/' + g.id + '" data-link="' + g.id + '">Copy link</a></div></article>';
   }
   function renderMenu() {
     if (!menuEl) return;
     menuEl.innerHTML = GAMES.map(cardHTML).join("");
     [].forEach.call(menuEl.querySelectorAll("[data-game]"), (b) => { b.onclick = () => open(b.getAttribute("data-game")); });
+    [].forEach.call(menuEl.querySelectorAll("[data-link]"), (a) => { a.onclick = (e) => { e.preventDefault(); copyLink(a.getAttribute("data-link"), a); }; });
   }
   function renderTabs() {
     if (!tabsEl) return;
@@ -738,11 +848,15 @@
     renderMenu();
     renderTabs();
     refreshPage();
-    window.onHeadsetHeroClose = refreshPage; // DMCA Dodge (game.js) calls this when it closes
+    window.onHeadsetHeroClose = () => { setPlayParam(null); refreshPage(); }; // DMCA Dodge (game.js) calls this when it closes
     [].forEach.call(document.querySelectorAll("[data-open-game]"), (b) => { b.onclick = () => open(b.getAttribute("data-open-game")); });
+    // a direct link: open that game's start screen straight away
+    let want = null;
+    try { want = new URLSearchParams(location.search).get("play"); } catch (e) {}
+    if (want && byId[want]) setTimeout(() => open(want), 0);
   }
 
-  window.GezArcade = { open, renderBoard, games: GAMES };
+  window.GezArcade = { open, renderBoard, games: GAMES, linkFor };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 })();

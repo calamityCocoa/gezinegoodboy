@@ -193,6 +193,7 @@ tr.nintendo td { font-weight: 800; background: #fde7ef; }
 .game-body p { font-size: .9em; margin: 0 0 8px; }
 .game-meta { color: #5b6275; font-size: .82em !important; }
 .game-body .btn { margin: 4px 0 0; }
+.game-link { display: inline-block; margin: 4px 0 0 10px; font-size: .85em; font-weight: 700; color: #5b6275; vertical-align: middle; }
 .board-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
 .tab { font: inherit; font-weight: 700; font-size: .88em; padding: 6px 12px; border-radius: 999px; border: 2px solid #d9dcea; background: #fff; color: #141a2b; cursor: pointer; min-height: 36px; }
 .tab.on { border-color: #141a2b; background: #141a2b; color: #fff; }
