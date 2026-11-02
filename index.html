@@ -101,6 +101,13 @@
     right: calc(16px + env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom));
     background: #fff; border: 1px solid #111; border-radius: 999px; box-shadow: 0 2px 8px rgba(0, 0, 0, .15); cursor: pointer;
   }
+  /* Headset Hero on the page */
+  .play-btn { font-size: 1em; padding: 8px 16px; border-radius: 999px; border: 1px solid #111; background: #111; color: #fff; cursor: pointer; }
+  #game-board .hh-board { width: 100%; max-width: 440px; }
+  #game-board .hh-board td:first-child, #game-board .hh-board th:first-child { width: 2em; text-align: right; }
+  #game-board .hh-board td:last-child, #game-board .hh-board th:last-child { text-align: right; }
+  #game-board .hh-board td:nth-child(2) { overflow-wrap: anywhere; }
+  #game-board tr.me { background: #ffe8f0; font-weight: bold; }
   /* phones and tablets */
   html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   body { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right));
@@ -146,7 +153,7 @@ If he is caught earning money from John Nintendo then it will show on this page.
 <div class="buttons">
   <p><button id="mood-btn">...</button> <span id="mood-count"></span></p>
   <p><button id="eta-btn">ETA WEN?</button> <span id="eta"></span></p>
-  <p id="game-row" hidden><button id="game-btn">🎧 Play gezine's headset game</button></p>
+  <p><button class="play-btn" data-play-game>🎧 Play Headset Hero</button></p>
   <p id="global" hidden>Everyone so far: <b id="g-pats">0</b> headpats and <b id="g-fs">0</b> respects paid.</p>
 </div>
 
@@ -164,6 +171,14 @@ Headphones recommended. Use the sound button in the corner to turn it on or off.
 If that doesn't play, download it: <a href="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/bootstrap-asmr.mp4">smaller (101 MB)</a> /
 <a href="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/bootstrap-asmr-full.mp4">full quality (253 MB)</a>.</p>
 <p><small>Before anyone says it: yes, we know <a href="https://github.com/pepsipu"><b>pepsipu</b></a> made <a href="https://gitlab.com/pepsipu/ns2jb">ns2jb</a>, which is where this bootstrap.bas comes from. gezine didn't write it, he's just being a good boy and reading it out for us.</small></p>
+
+<h2 id="headset-hero">Headset Hero</h2>
+<p>gezine put her headset on. Catch the notes, SmileBASIC tokens and stars, and dodge John Nintendo's DMCA letters.
+Get hit three times and the real <a href="https://gitlab.com/pepsipu/ns2jb/-/blob/main/bootstrap.bas">bootstrap.bas</a> falls on her, line by line.
+Works with a keyboard, a mouse or a finger. (Psst: 30 headpats also gets you in.)</p>
+<p><button class="play-btn" data-play-game>▶ Play Headset Hero</button></p>
+<h3>Leaderboard</h3>
+<div id="game-board"><p><small>Loading...</small></p></div>
 
 <p>I just want to kiss you John Nintendo you are so sexy and strong and muscular with your awesome business practices, please take all of my money</p>
 
@@ -244,18 +259,19 @@ const ETAS = [
 $("eta-btn").onclick = () => show("eta", ETAS[Math.floor(Math.random() * ETAS.length)]);
 
 let isBad = false, pats = 0, fs = 0;
-// 30 headpats (or 30 respects) and gezine puts her headset on: see game.js
+// Headset Hero (game.js): the play buttons, the leaderboard on the page,
+// and 30 headpats (or 30 respects) opens it as a surprise
 const GAME_AT = 30;
 let gameOpened = false;
-function gameUnlocked() { $("game-row").hidden = false; }
-if (window.HeadsetHero && HeadsetHero.unlocked()) gameUnlocked();
-$("game-btn").onclick = () => HeadsetHero.open();
+document.querySelectorAll("[data-play-game]").forEach((b) => { b.onclick = () => HeadsetHero.open(); });
+const refreshBoard = () => HeadsetHero.renderBoard($("game-board"), 10, (() => { try { return localStorage.getItem("headset-name"); } catch (e) { return null; } })());
+refreshBoard();
+window.onHeadsetHeroClose = refreshBoard;
 function maybeStartGame(n) {
-  if (n === GAME_AT - 10 && window.HeadsetHero) HeadsetHero.preload(); // get the art ready early
-  if (n >= GAME_AT && !gameOpened && window.HeadsetHero) {
+  if (n === GAME_AT - 10) HeadsetHero.preload(); // get the art ready early
+  if (n >= GAME_AT && !gameOpened) {
     gameOpened = true;
-    gameUnlocked();
-    setTimeout(() => HeadsetHero.open(), 700); // let the last headpat finish first
+    setTimeout(() => HeadsetHero.open("pats"), 700); // let the last headpat finish first
   }
 }
 $("mood-btn").onclick = () => {
