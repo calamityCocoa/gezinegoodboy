@@ -237,7 +237,7 @@
   .hh-board tr.me td { background: #fde7ef; font-weight: 800; }
   .hh-dev { font-weight: 400; color: #8a90a2; white-space: nowrap; }
   .pop { position: absolute; pointer-events: none; font-weight: 800; animation: ar-pop .8s ease-out forwards; }
-  @keyframes ar-pop { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -50px); } }
+  @keyframes ar-pop { 0% { opacity: 0; transform: translate(-50%, 4px); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50px); } }
 
   /* clicker */
   .ck { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; justify-content: center; width: 760px; }
@@ -276,8 +276,6 @@
   .sb .todo { opacity: .38; }
   .sb .bad { background: #e53935; color: #fff !important; border-radius: 2px; opacity: 1; }
   .sb .caret { position: relative; opacity: .38; }
-  .sb .caret::after { content: ""; position: absolute; left: 0; right: 0; bottom: 1px; height: 3px; background: #fff; animation: sb-blink 1s steps(1) infinite; }
-  @keyframes sb-blink { 50% { opacity: 0; } }
   .sb-status { display: flex; justify-content: space-between; gap: 10px; background: #1a2054; color: #8c95d4; font-size: 12px; padding: 5px 10px; }
   .ty-cmd { display: flex; align-items: center; gap: 8px; margin-top: 12px; background: #0b0f2a; border: 3px solid #2b3270; border-radius: 12px; padding: 4px 12px; }
   .ty-cmd span { color: #ffe066; font: 700 18px ui-monospace, Menlo, Consolas, monospace; }
@@ -289,8 +287,6 @@
   .wk-win { position: relative; aspect-ratio: 1; height: 0; padding-bottom: 100%; border-radius: 18px; border: 3px solid #6b4a2b; background: #2a3350; overflow: hidden; cursor: pointer; }
   @supports (aspect-ratio: 1) { .wk-win { height: auto; padding-bottom: 0; } }
   .wk-win::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 18%; background: #8a5a33; border-top: 3px solid #6b4a2b; }
-  .wk-win img { position: absolute; left: 8%; width: 84%; bottom: -100%; transition: bottom .12s ease-out; pointer-events: none; }
-  .wk-win.up img { bottom: 17%; } /* sits just above the sill */
   .wk-win.hit { background: #4a2a2a; }
   .wk-win.oops { background: #c62828; }
   .wk-key { position: absolute; top: 4px; left: 8px; color: rgba(255,255,255,.35); font-size: .75em; font-weight: 800; }
@@ -314,9 +310,100 @@
   .cb .B { grid-column: 2; grid-row: 3; background: #e0b020; } .cb .Y { grid-column: 1; grid-row: 2; background: #43a047; }
   .cb .mid { grid-column: 2; grid-row: 2; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 800; font-size: .95em; }
   @media (max-width: 420px) { .cb { grid-template-columns: repeat(3, 84px); grid-template-rows: repeat(3, 84px); } }
+  /* Transform/opacity only motion; the distances stay gentle on reduced motion. */
+  #ar { animation: ar-enter .2s cubic-bezier(.2,.8,.2,1) both; }
+  .ar-panel { animation: ar-panel-enter .2s cubic-bezier(.2,.8,.2,1) both; }
+  .ar-stage > .ck, .ar-stage > .ty, .ar-stage > .wk, .ar-stage > .mt, .ar-stage > .cb-layout {
+    animation: ar-enter .2s cubic-bezier(.2,.8,.2,1) both;
+  }
+  @keyframes ar-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes ar-panel-enter { from { opacity: 0; transform: translate(-50%, calc(-50% + 12px)) scale(.98); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+  .ar-btn, .ar-chip, .ar-x, .ck-up { transition: transform .18s ease-out, opacity .18s ease-out, background-color .18s ease-out, box-shadow .18s ease-out; }
+  .ar-btn:hover, .ar-chip:hover, .ck-up:hover { transform: translateY(-2px); }
+  .ar-btn:active, .ar-chip:active, .ar-x:active, .ck-up:active { transform: scale(.97); }
+  .ck-up.ar-bought { transform: translateY(-2px) scale(1.02); background: #fde7ef; box-shadow: 0 0 0 3px #f0629233; }
+  .ar-sprite { position: relative; display: block; transform-origin: 50% 90%; }
+  .ar-sprite img { position: absolute; top: 0; right: 0; bottom: 0; left: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+  .ar-sprite-fallback { position: absolute; left: 15%; top: 20%; width: 70%; height: 65%; border-radius: 45%; background: #fde7ef; color: #141a2b; display: flex; align-items: center; justify-content: center; font: 700 2em "Fredoka", sans-serif; }
+  .ck-gez .ar-sprite { width: 100%; height: 100%; }
+  .ck-gez:active { transform: none; }
+  .wk-win { transition: background-color .15s ease-out; }
+  .wk-actor { position: absolute; left: 4%; bottom: 12%; width: 92%; height: 88%; will-change: transform; }
+  .wk-win .ar-sprite img { left: 0; bottom: 0; transition: none; }
+  .sb-body { position: relative; height: 16.5em; padding: 0; overflow: hidden; }
+  .sb-rows { will-change: transform; }
+  .sb-row { height: 1.65em; transition: background-color .12s ease-out, opacity .12s ease-out; }
+  .sb .caret::after { display: none; }
+  .sb-caret { position: absolute; left: 0; top: 0; width: 1ch; height: 3px; background: #fff; pointer-events: none; }
+  .mt-card { overflow: visible; background: transparent; perspective: 700px; }
+  .mt-card::before { content: none; }
+  .mt-card.open, .mt-card.done { background: transparent; }
+  .mt-flip { position: absolute; top: 0; right: 0; bottom: 0; left: 0; transform-style: preserve-3d; transition: transform .36s cubic-bezier(.22,.7,.25,1); }
+  .mt-face { position: absolute; top: 0; right: 0; bottom: 0; left: 0; border-radius: 11px; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+  .mt-back { background: #141a2b; display: flex; align-items: center; justify-content: center; color: #f06292; font: 600 2em "Fredoka", sans-serif; }
+  .mt-front { background: #fff; transform: rotateY(180deg); }
+  .mt-card img, .mt-card.open img, .mt-card.done img { visibility: visible; }
+  .mt-card.open .mt-flip, .mt-card.done .mt-flip { transform: rotateY(180deg); }
+  .mt-card { transition: border-color .18s ease-out, box-shadow .18s ease-out; }
+  .cb-layout { display: flex; align-items: center; justify-content: center; gap: 20px; }
+  .cb-reaction { width: 170px; height: 220px; flex: none; }
+  .cb button { transition: transform .12s cubic-bezier(.2,.8,.2,1), opacity .12s ease-out, box-shadow .12s ease-out; }
+  @media (max-width: 650px) { .cb-layout { flex-direction: column; gap: 8px; } .cb-reaction { width: 130px; height: 135px; } }
+  @media (prefers-reduced-motion: reduce) {
+    @keyframes ar-enter { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes ar-panel-enter { from { opacity: 0; transform: translate(-50%, calc(-50% + 3px)); } to { opacity: 1; transform: translate(-50%, -50%); } }
+    .cb button.lit { transform: scale(1.02); box-shadow: 0 0 12px currentColor; }
+    .mt-flip { transition-duration: .2s; }
+    .pop { animation-name: ar-pop-gentle; }
+    @keyframes ar-pop-gentle { 0% { opacity: 0; transform: translate(-50%, 0); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -10px); } }
+  }
   `;
 
+  // All procedural motion shares this clock. Timers below still own gameplay timing.
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let motionFrame = 0, motionLast = 0, motionTime = 0, motionJobs = [];
+  const easeTo = (value, target, dt, speed) => value + (target - value) * (1 - Math.exp(-dt * speed));
+  function animate(fn) { motionJobs.push(fn); }
+  function motionTick(now) {
+    const dt = Math.min(.05, Math.max(0, (now - motionLast) / 1000));
+    motionLast = now; motionTime += dt;
+    motionJobs.forEach((fn) => fn(dt, motionTime));
+    motionFrame = requestAnimationFrame(motionTick);
+  }
+  function startMotion() {
+    if (motionFrame) return;
+    motionLast = performance.now();
+    motionFrame = requestAnimationFrame(motionTick);
+  }
+  // Keep each loaded frame in its own layer so even rapid interrupted fades are continuous.
+  function sprite(host, paths, label) {
+    host.classList.add("ar-sprite");
+    const fallback = document.createElement("span");
+    fallback.className = "ar-sprite-fallback"; fallback.textContent = label;
+    host.appendChild(fallback);
+    const layers = paths.map((path) => {
+      const image = document.createElement("img");
+      image.alt = ""; image.style.opacity = "0";
+      const layer = { image, alpha: 0, loaded: false };
+      image.onload = () => { layer.loaded = true; };
+      image.onerror = () => { layer.loaded = false; };
+      image.src = path; host.appendChild(image);
+      return layer;
+    });
+    let selected = 0, fallbackAlpha = 1;
+    animate((dt) => {
+      layers.forEach((layer, i) => {
+        layer.alpha = easeTo(layer.alpha, i === selected && layer.loaded ? 1 : 0, dt, 36);
+        layer.image.style.opacity = layer.alpha.toFixed(4);
+      });
+      fallbackAlpha = easeTo(fallbackAlpha, layers[selected].loaded ? 0 : 1, dt, 36);
+      fallback.style.opacity = fallbackAlpha.toFixed(4);
+    });
+    return (frame) => { selected = frame; };
+  }
+
   let root, titleEl, scoreEl, statusEl, stage, panel, lastFocus;
+  let hudNumber = 0, hudTarget = 0, hudSuffix = "", hudSmooth = false;
   let current = null, playing = false, runPromise = null, runId = null, timers = [], keyHandler = null, cleanup = null;
 
   function build() {
@@ -350,7 +437,12 @@
   function clearTimers() { timers.forEach((t) => { clearTimeout(t); clearInterval(t); }); timers = []; }
   const api = {
     get stage() { return stage; },
-    score(text) { scoreEl.textContent = text; },
+    score(text) {
+      const number = /^(\d+)(.*)$/.exec(String(text));
+      if (number && current && ["typer", "whack", "match", "combo"].indexOf(current.id) >= 0) {
+        hudTarget = Number(number[1]); hudSuffix = number[2]; hudSmooth = true;
+      } else { hudSmooth = false; scoreEl.textContent = text; }
+    },
     status(text) { statusEl.textContent = text; },
     after(ms, fn) { const t = setTimeout(fn, ms); timers.push(t); return t; },
     every(ms, fn) { const t = setInterval(fn, ms); timers.push(t); return t; },
@@ -367,6 +459,10 @@
 
   function stopGame() {
     playing = false;
+    if (hudSmooth) scoreEl.textContent = hudTarget + hudSuffix;
+    hudSmooth = false;
+    motionJobs = [];
+    cancelAnimationFrame(motionFrame); motionFrame = 0;
     clearTimers();
     keyHandler = null;
     if (cleanup) { try { cleanup(); } catch (e) {} cleanup = null; }
@@ -438,6 +534,14 @@
     stage.innerHTML = "";
     scoreEl.textContent = ""; statusEl.textContent = "";
     playing = true;
+    hudNumber = 0; hudTarget = 0; hudSmooth = false;
+    animate((dt) => {
+      if (!hudSmooth) return;
+      hudNumber = easeTo(hudNumber, hudTarget, dt, 22);
+      if (Math.abs(hudNumber - hudTarget) < .01) hudNumber = hudTarget;
+      scoreEl.textContent = Math.round(hudNumber) + hudSuffix;
+    });
+    startMotion();
     runId = null;
     api.options = {};
     (current.options || []).forEach((o) => { api.options[o.id] = chosen(current, o); });
@@ -523,6 +627,7 @@
     if (current && current.id === "clicker" && playing) stopGame();
     stopGame();
     root.hidden = true;
+    cancelAnimationFrame(motionFrame); motionFrame = 0; motionLast = 0;
     stage.innerHTML = "";
     panel.hidden = true;
     document.documentElement.style.overflow = "";
@@ -551,18 +656,34 @@
     const cost = (u) => Math.floor(u.base * Math.pow(u.grow, owned(u.id)));
     const save = () => store.set("clicker", JSON.stringify(S));
 
-    a.stage.innerHTML = '<div class="ck"><div class="ck-left"><button class="ck-gez" type="button" aria-label="Pat gezine"><img src="images/good/0.png" alt=""></button>' +
+    a.stage.innerHTML = '<div class="ck"><div class="ck-left"><button class="ck-gez" type="button" aria-label="Pat gezine"><span class="ck-actor"></span></button>' +
       '<p class="ck-count"></p><p class="ck-rate"></p><p class="ck-global"></p></div><div class="ck-shop"></div></div>';
-    const gez = a.stage.querySelector(".ck-gez"), img = gez.querySelector("img"), count = a.stage.querySelector(".ck-count"),
+    const gez = a.stage.querySelector(".ck-gez"), actor = gez.querySelector(".ck-actor"), count = a.stage.querySelector(".ck-count"),
       rate = a.stage.querySelector(".ck-rate"), global = a.stage.querySelector(".ck-global"), shop = a.stage.querySelector(".ck-shop");
     shop.innerHTML = "<h3 style=\"margin:0 0 10px\">Upgrades</h3>" + UPGRADES.map((u) =>
       '<button class="ck-up" type="button" data-up="' + u.id + '"><em></em><b>' + esc(u.name) + '</b><span>' + esc(u.desc) + "</span></button>").join("");
     const ups = [].slice.call(shop.querySelectorAll(".ck-up"));
+    const upgradePulse = ups.map(() => 0);
 
+    const setPatFrame = sprite(actor, ["images/good/0.png"].concat([0, 1, 2, 3].map((i) => "images/pat/" + i + ".png")), "G");
+    let shownPats = S.pats, patAge = 10, patSquash = 0;
+    animate((dt, time) => {
+      ups.forEach((button, i) => {
+        upgradePulse[i] = Math.max(0, upgradePulse[i] - dt);
+        if (!upgradePulse[i]) button.classList.remove("ar-bought");
+      });
+      shownPats = easeTo(shownPats, S.pats, dt, 16);
+      if (Math.abs(shownPats - S.pats) < .01) shownPats = S.pats;
+      count.textContent = short(shownPats) + " headpats";
+      a.score(short(shownPats));
+      patAge += dt;
+      if (patAge > .45) setPatFrame(0);
+      const impulse = Math.exp(-patAge * 12) * Math.cos(patAge * 24) * (reducedMotion ? .035 : .13);
+      patSquash = easeTo(patSquash, impulse, dt, 40);
+      actor.style.transform = "translateY(" + Math.sin(time * 2.5) * (reducedMotion ? .5 : 2) + "px) scale(" + (1 + patSquash) + "," + (1 - patSquash + Math.sin(time * 2.5) * (reducedMotion ? .004 : .012)) + ")";
+    });
     function render() {
-      count.textContent = short(S.pats) + " headpats";
       rate.textContent = perPat().toLocaleString() + " per pat · " + short(perSec()) + " per second";
-      a.score(short(S.pats));
       ups.forEach((b) => {
         const u = UPGRADES.filter((x) => x.id === b.getAttribute("data-up"))[0];
         b.querySelector("em").textContent = short(cost(u)) + (owned(u.id) ? " · x" + owned(u.id) : "");
@@ -575,19 +696,20 @@
         if (S.pats < cost(u)) return;
         S.pats -= cost(u);
         S.owned[u.id] = owned(u.id) + 1;
+        b.classList.add("ar-bought");
+        upgradePulse[ups.indexOf(b)] = .18;
         save(); render();
       };
     });
 
     // every pat by hand also counts towards everyone's global headpats (batched, like the main button)
-    let pending = 0, frame = 0, frameTimer = 0;
+    let pending = 0, frame = 0;
     function pat(e) {
       S.pats += perPat();
       pending++;
-      clearTimeout(frameTimer);
       frame = (frame + 1) % 4;
-      img.src = "images/pat/" + frame + ".png";
-      frameTimer = setTimeout(() => { img.src = "images/good/0.png"; }, 450);
+      setPatFrame(frame + 1);
+      patAge = 0;
       const r = gez.getBoundingClientRect(), s = a.stage.getBoundingClientRect();
       const x = e && e.clientX ? e.clientX - s.left : r.left - s.left + r.width / 2;
       const y = e && e.clientY ? e.clientY - s.top : r.top - s.top + 20;
@@ -631,8 +753,23 @@
     input.onpaste = (e) => e.preventDefault();
     let lines = toLines(PRACTICE), cur = 0, best = 0, score = 0, typedOk = 0, left = SECONDS, started = false, ready = false;
 
+    const rows = document.createElement("div"), caret = document.createElement("span");
+    rows.className = "sb-rows"; caret.className = "sb-caret";
+    body.innerHTML = ""; body.appendChild(rows); body.appendChild(caret);
+    let drawCur = -1, lineTarget = 0, lineShown = 0, rowStart = -BEFORE, caretX = 0, caretTarget = 0, caretLine = 0;
+    let stopped = false;
+    a.onStop(() => { stopped = true; });
+    animate((dt, time) => {
+      lineShown = easeTo(lineShown, lineTarget, dt, reducedMotion ? 24 : 16);
+      caretX = easeTo(caretX, caretTarget, dt, 28);
+      caretLine = easeTo(caretLine, lineTarget, dt, 28);
+      rows.style.transform = "translateY(" + ((rowStart - lineShown + BEFORE) * 1.65) + "em)";
+      caret.style.transform = "translate(calc(6em + " + caretX + "ch), " + ((caretLine - lineShown + BEFORE + 1) * 1.65 - .2) + "em)";
+      caret.style.opacity = ready ? String(.6 + .4 * Math.sin(time * Math.PI * 2) * Math.sin(time * Math.PI * 2)) : "0";
+    });
     clock.textContent = SECONDS + "s";
     loadCode(version.id).then((c) => {
+      if (stopped) return;
       lines = c.lines;
       src.innerHTML = c.real ? "Lines from the " + esc(version.label) + ' bootstrap.bas (<a href="' + version.repo + '" target="_blank" rel="noopener">source</a>). Capitals don\'t matter.' : "Practice lines (couldn't reach that repo).";
       // start somewhere random, on a line you can type
@@ -668,15 +805,22 @@
     function draw() {
       if (!ready) return 0;
       const l = lines[cur], v = input.value, ok = okCount(v, l.text);
-      let html = "";
-      for (let k = BEFORE; k >= 1; k--) { const i = cur - k; if (i >= 0) html += rowHTML(lines[i], "prev"); }
-      html += rowHTML(l, "cur", { v, ok });
-      for (let k = 1; k <= AFTER; k++) {
-        const i = cur + k;
-        if (i >= lines.length) break;
-        html += rowHTML(lines[i], "next").replace('class="sb-row next', 'style="opacity:' + (0.62 - k * 0.08).toFixed(2) + '" class="sb-row next');
+      if (drawCur < 0) { drawCur = cur; caretX = l.indent; }
+      if (cur !== drawCur) {
+        lineTarget += (cur - drawCur + lines.length) % lines.length;
+        drawCur = cur;
       }
-      body.innerHTML = html;
+      caretTarget = l.indent + Math.min(v.length, l.text.length);
+      // Retain the outgoing rows until they have scrolled out of the viewport.
+      rowStart = Math.floor(lineShown) - BEFORE;
+      const rowEnd = lineTarget + AFTER;
+      let html = "";
+      for (let row = rowStart; row <= rowEnd; row++) {
+        const i = ((cur + row - lineTarget) % lines.length + lines.length) % lines.length;
+        const cls = row === lineTarget ? "cur" : row < lineTarget ? "prev" : "next";
+        html += rowHTML(lines[i], cls, row === lineTarget ? { v, ok } : null);
+      }
+      rows.innerHTML = html;
       pos.textContent = "LINE " + l.n + "  COL " + (Math.min(v.length, l.text.length) + 1 + l.indent);
       return ok;
     }
@@ -713,18 +857,45 @@
     const SECONDS = 45, KEYS = ["7", "8", "9", "4", "5", "6", "1", "2", "3"], LETTERS = ["q", "w", "e", "a", "s", "d", "z", "x", "c"];
     a.stage.innerHTML = '<div class="wk">' + KEYS.map((k, i) =>
       '<button class="wk-win" type="button" data-i="' + i + '" aria-label="Window ' + (i + 1) + '">' + (touchy() ? "" : '<span class="wk-key">' + LETTERS[i].toUpperCase() + "</span>") +
-      '<img src="images/arcade/john-head.png" alt=""></button>').join("") + "</div>";
+      '<span class="wk-actor"></span></button>').join("") + "</div>";
     const wins = [].slice.call(a.stage.querySelectorAll(".wk-win"));
     const slot = wins.map(() => null); // null | { who, until }
     let score = 0, combo = 0, left = SECONDS, t = 0;
+    const actors = wins.map((w) => {
+      const host = w.querySelector(".wk-actor");
+      const setFrame = sprite(host, ["john", "gezine"].reduce((paths, who) => paths.concat([0, 1, 2, 3].map((i) => "images/whack/" + who + "/" + i + ".png")), []), "J / G");
+      host.style.transform = "translateY(120%)";
+      return { host, setFrame, y: 1.2, velocity: 0, age: 0, squash: 0, who: "john", phase: "hidden" };
+    });
+    animate((dt, time) => {
+      actors.forEach((v) => {
+        v.age += dt;
+        const up = v.phase === "up", bonked = v.phase === "bonked" && v.age < .15;
+        const target = up || bonked ? 0 : 1.2;
+        // Analytic damped spring: stable with variable dt, no fixed-step render jitter.
+        const speed = reducedMotion ? 24 : 19, damping = reducedMotion ? 0 : 12;
+        const displacement = v.y - target, decay = Math.exp(-speed * dt);
+        if (damping) {
+          const c = Math.cos(damping * dt), sn = Math.sin(damping * dt);
+          const b = (v.velocity + speed * displacement) / damping;
+          v.y = target + decay * (displacement * c + b * sn);
+          v.velocity = decay * ((b * damping - speed * displacement) * c - (displacement * damping + speed * b) * sn);
+        } else { v.y = easeTo(v.y, target, dt, speed); v.velocity = 0; }
+        const john = v.who === "john";
+        v.setFrame(bonked ? (john ? 2 : 5) : up ? (v.age < .1 ? (john ? 0 : 6) : (john ? 1 : 4)) : (john ? 3 : 7));
+        const squash = v.phase === "bonked" ? Math.exp(-v.age * 15) * (reducedMotion ? .04 : .18) : 0;
+        v.squash = easeTo(v.squash, squash, dt, 45);
+        v.host.style.transform = "translateY(" + (v.y * 100 + Math.sin(time * 3) * (reducedMotion ? .25 : 1)) + "%) scale(" + (1 + v.squash) + "," + (1 - v.squash + Math.sin(time * 3) * (reducedMotion ? .003 : .01)) + ")";
+      });
+    });
     function show(i, who, ms) {
       const w = wins[i];
-      w.querySelector("img").src = who === "john" ? "images/arcade/john-head.png" : "images/arcade/gezine-head.png";
+      const v = actors[i]; v.who = who; v.phase = "up"; v.age = 0;
       w.classList.remove("hit", "oops");
       w.classList.add("up");
       slot[i] = { who, until: Date.now() + ms };
     }
-    function hide(i) { wins[i].classList.remove("up"); slot[i] = null; }
+    function hide(i, bonked) { wins[i].classList.remove("up"); slot[i] = null; actors[i].phase = bonked ? "bonked" : "down"; actors[i].age = 0; }
     function hit(i) {
       const s = slot[i];
       if (!s) return;
@@ -743,7 +914,7 @@
         a.pop(x, y, "-5 not gezine!", "#c62828");
         if (navigator.vibrate) navigator.vibrate(80);
       }
-      hide(i);
+      hide(i, true);
       a.after(260, () => wins[i].classList.remove("hit", "oops")); // just a quick flash
       a.score(score + " bonks");
     }
@@ -779,8 +950,13 @@
       "images/good/0.png", "images/bad/0.png", "images/pat/2.png", "images/game/1.png"];
     const deck = shuffle(POSES.concat(POSES));
     a.stage.innerHTML = '<div class="mt">' + deck.map((src, i) =>
-      '<button class="mt-card" type="button" data-i="' + i + '" aria-label="Card ' + (i + 1) + '"><img src="' + src + '" alt=""></button>').join("") + "</div>";
+      '<button class="mt-card" type="button" data-i="' + i + '" aria-label="Card ' + (i + 1) + '"><span class="mt-flip"><span class="mt-face mt-back">?</span><span class="mt-face mt-front"><img src="' + src + '" alt=""></span></span></button>').join("") + "</div>";
     const cards = [].slice.call(a.stage.querySelectorAll(".mt-card"));
+    const poseImages = cards.map((c) => c.querySelector("img"));
+    animate((dt, time) => {
+      const breath = Math.sin(time * 2.4) * (reducedMotion ? .004 : .012);
+      poseImages.forEach((image) => { image.style.transform = "translateY(" + (-breath * 70) + "%) scaleY(" + (1 + breath) + ")"; });
+    });
     let first = null, lock = false, misses = 0, found = 0, startedAt = 0;
     const scoreNow = () => Math.max(50, Math.round(1000 - ((Date.now() - startedAt) / 1000) * 8 - misses * 15));
     cards.forEach((c, i) => {
@@ -814,11 +990,17 @@
   // ================================================================ Combo Says
   IMPL.combo = (a) => {
     const BTN = ["X", "A", "B", "Y"], TONE = { X: 523, A: 659, B: 392, Y: 440 };
-    a.stage.innerHTML = '<div class="cb"><button class="X" type="button">X</button><button class="A" type="button">A</button>' +
-      '<div class="mid">Watch</div><button class="B" type="button">B</button><button class="Y" type="button">Y</button></div>';
+    a.stage.innerHTML = '<div class="cb-layout"><div class="cb"><button class="X" type="button">X</button><button class="A" type="button">A</button>' +
+      '<div class="mid">Watch</div><button class="B" type="button">B</button><button class="Y" type="button">Y</button></div><div class="cb-reaction" role="img" aria-label="gezine watching"></div></div>';
     const el = {};
     BTN.forEach((b) => { el[b] = a.stage.querySelector("." + b); });
     const mid = a.stage.querySelector(".mid");
+    const reaction = a.stage.querySelector(".cb-reaction");
+    const setReaction = sprite(reaction, [0, 1, 2, 3].map((i) => "images/combo/gezine/" + i + ".png"), "G");
+    function react(frame, label) { setReaction(frame); reaction.setAttribute("aria-label", "gezine " + label); }
+    animate((dt, time) => {
+      reaction.style.transform = "translateY(" + Math.sin(time * 2.4) * (reducedMotion ? .6 : 3) + "px) rotate(" + Math.sin(time * 1.2) * (reducedMotion ? .15 : .7) + "deg) scaleY(" + (1 + Math.sin(time * 2.4) * (reducedMotion ? .004 : .012)) + ")";
+    });
     let audio = null;
     try { const AC = window.AudioContext || window.webkitAudioContext; if (AC) audio = new AC(); } catch (e) {}
     function beep(freq, ms) {
@@ -844,10 +1026,11 @@
       seq.push(pick(BTN));
       pos = 0;
       mid.textContent = "Watch";
+      react(0, "watching");
       a.status("round " + (rounds + 1));
       const step = Math.max(260, 520 - rounds * 18);
       seq.forEach((b, i) => a.after(600 + i * step, () => light(b, step * 0.7)));
-      a.after(600 + seq.length * step, () => { listening = true; mid.textContent = "Your turn"; });
+      a.after(600 + seq.length * step, () => { listening = true; mid.textContent = "Your turn"; react(1, "pointing: your turn"); });
     }
     function press(b) {
       if (!listening) return;
@@ -856,6 +1039,7 @@
         listening = false;
         beep(140, 500);
         mid.textContent = "Nope!";
+        react(3, "sad after a mistake");
         a.after(500, () => a.end(rounds * 10, rounds >= 10 ? "Combo master!" : "Combo dropped at " + (rounds + 1)));
         return;
       }
@@ -864,6 +1048,7 @@
         rounds++;
         a.score(rounds * 10 + " pts");
         mid.textContent = "Nice!";
+        react(2, "cheering");
         listening = false;
         a.after(500, round);
       }

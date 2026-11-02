@@ -46,10 +46,18 @@
 
   // ---------------------------------------------------------------- assets
   const imgs = {};
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const ease = (v) => { v = clamp(v, 0, 1); return v * v * (3 - 2 * v); };
+  // Blend weights survive interrupted frame changes without a visible snap.
+  function blend(track, name, dt) {
+    const a = 1 - Math.exp(-dt / 0.025);
+    if (track[name] === undefined) track[name] = 0;
+    Object.keys(track).forEach((key) => { track[key] += ((key === name ? 1 : 0) - track[key]) * a; if (track[key] < 0.001 && key !== name) delete track[key]; });
+  }
   let spritesReady = null;
   function loadSprites() {
     if (!spritesReady) {
-      const files = Object.keys(ANCHORS).map((n) => [n, "images/headset/" + n + ".png"]);
+      const files = ["note", "star", "dmca", "token"].map((n) => ["item-" + n, "images/dodge/items/" + n + ".png"]).concat(Object.keys(ANCHORS).map((n) => [n, "images/headset/" + n + ".png"]));
       for (let i = 0; i < 4; i++) files.push(["jenter" + i, "images/john-enter/" + i + ".png"], ["jloop" + i, "images/john/" + i + ".png"]);
       spritesReady = Promise.all(files.map(([n, src]) => new Promise((ok) => {
         const im = new Image();
@@ -141,7 +149,7 @@
   #hh[hidden] { display: none; }
   #hh canvas { display: block; width: 100%; height: 100%; touch-action: none; }
   .hh-corner { position: absolute; top: calc(env(safe-area-inset-top) + 10px); width: 44px; height: 44px; border-radius: 50%;
-               border: 1px solid #111; background: #fff; color: #111; font: 18px/1 Georgia, serif; cursor: pointer; padding: 0; }
+               border: 1px solid #111; background: #fff; color: #111; font: 18px/1 Georgia, serif; cursor: pointer; padding: 0; transition: transform .14s ease, background .14s ease; }
   #hh-exit { right: calc(env(safe-area-inset-right) + 10px); }
   #hh-pause { right: calc(env(safe-area-inset-right) + 62px); }
   #hh-pause[hidden] { display: none; }
@@ -156,7 +164,9 @@
   #hh-panel p { margin: 8px 0; }
   #hh-panel .big { font-size: 2.2em; font-weight: bold; margin: 0; line-height: 1.1; }
   #hh-panel button { font: inherit; min-height: 44px; padding: 8px 18px; margin: 6px 4px 0; border-radius: 999px;
-                     border: 1px solid #111; background: #fff; color: #111; cursor: pointer; }
+                     border: 1px solid #111; background: #fff; color: #111; cursor: pointer; transition: transform .14s ease; }
+  .hh-corner:hover, #hh-panel button:hover { transform: scale(1.04); }
+  .hh-corner:active, #hh-panel button:active { transform: scale(.96); }
   #hh-panel button.main { background: #111; color: #fff; }
   #hh-panel form { margin: 10px 0 4px; }
   #hh-panel input { font: inherit; font-size: 16px; /* 16px stops iOS zooming in */ width: 100%; box-sizing: border-box;
@@ -193,6 +203,7 @@
     canvas = root.querySelector("canvas");
     ctx = canvas.getContext("2d");
     panel = root.querySelector("#hh-panel");
+    panel.style.opacity = "0";
     exitBtn = root.querySelector("#hh-exit");
     pauseBtn = root.querySelector("#hh-pause");
     exitBtn.onclick = close;
@@ -259,9 +270,8 @@
   // ---------------------------------------------------------------- controllers
   // Any standard gamepad (Xbox, PlayStation, Switch Pro, Steam Deck): stick or D-pad to run,
   // A to start / pick, B to leave, Start to pause; D-pad moves between menu buttons.
-  let padRaf = 0, padPrev = [];
+  let padPrev = [];
   function pollPad() {
-    padRaf = 0;
     if (!root || root.hidden) return;
     const pads = navigator.getGamepads ? navigator.getGamepads() : null;
     let p = null;
@@ -287,7 +297,6 @@
       }
       padPrev = [].map.call(p.buttons, (b) => b.pressed || b.value > 0.5);
     }
-    padRaf = requestAnimationFrame(pollPad);
   }
 
   // ---------------------------------------------------------------- sizing
@@ -313,11 +322,14 @@
   // ---------------------------------------------------------------- game state
   let state = "closed", raf = 0, last = 0, T = 0, spawnIn = 0, runId = null, runPromise = null;
   let g = null, items = [], pops = [], score = 0, lives = 3, combo = 0, best = 0, overIn = 0, bury = null, johnT = -1;
+  let shownScore = 0, shownBest = 0, shownMult = 1, lean = 0, catchSquash = 0, catchVelocity = 0, gezBlend = {}, johnBlend = {}, johnAlpha = 0;
+  let panelOpacity = 0, panelTarget = 0;
   let pointerX = null, pointerDown = false, padActive = false, padX = 0;
 
   function reset() {
     g = { x: W / 2, vx: 0, dir: 1, stun: 0, jump: 0, anim: 0, dead: false };
     items = []; pops = []; bury = null; johnT = -1;
+    shownScore = 0; shownBest = best; shownMult = 1; lean = 0; catchSquash = 0; catchVelocity = 0; gezBlend = {}; johnBlend = {}; johnAlpha = 0;
     score = 0; lives = 3; combo = 0; T = 0; spawnIn = 0.6; overIn = 0;
     pointerX = null; pointerDown = false; keys.left = keys.right = false; padX = 0;
   }
@@ -335,7 +347,7 @@
     ctx.font = "bold " + Math.round(size) + "px " + MONO;
     const half = kind === "token" ? ctx.measureText(text).width / 2 + size * 0.6 : size;
     items.push({
-      kind, text, size, half,
+      kind, text, size, half, age: 0, fade: 1, phase: rand(0, Math.PI * 2),
       x: rand(half + 8, Math.max(half + 9, W - half - 8)), y: -size * 2,
       vy: H * (0.26 + 0.5 * d) * rand(0.85, 1.15) * (kind === "star" ? 1.25 : 1),
       rot: rand(-0.3, 0.3), vr: rand(-1.2, 1.2), hue: Math.random() < 0.5 ? "#7fb8f0" : "#f29bb0",
@@ -347,6 +359,7 @@
 
   function update(dt) {
     T += dt;
+    items.forEach((it) => { it.age += dt; if (it.hit) it.fade = Math.max(0, it.fade - dt / 0.12); });
     g.anim += dt;
     g.stun = Math.max(0, g.stun - dt);
     g.jump = Math.max(0, g.jump - dt);
@@ -404,6 +417,7 @@
         if (lives <= 0) die();
       } else if (g.stun <= 0) {
         it.hit = true;
+        catchVelocity += 18;
         combo++;
         const mult = Math.min(5, 1 + Math.floor(combo / 10));
         const pts = (it.kind === "note" ? 1 : it.kind === "token" ? 3 : 10) * mult;
@@ -412,7 +426,7 @@
         pop(it.x, it.y, "+" + pts + (it.kind === "token" ? " " + it.text : ""), it.kind === "star" ? "#b8860b" : "#141a2b");
       }
     }
-    items = items.filter((it) => !it.hit && it.y < H + it.size * 3);
+    items = items.filter((it) => it.fade > 0 && it.y < H + it.size * 3);
   }
 
   // ---------------------------------------------------------------- the burial
@@ -518,30 +532,39 @@
   }
 
   function drawJohn() {
-    const im = imgs[johnFrame()];
-    if (!im || !im.complete || !im.naturalWidth) return false;
     const k = gh / JOHN_GEZ_H;
-    ctx.drawImage(im, g.x - JOHN_FEET[0] * k, ground - JOHN_FEET[1] * k, JOHN_W * k, JOHN_H * k);
-    return true;
+    let ready = false;
+    Object.keys(johnBlend).forEach((name) => {
+      const im = imgs[name];
+      if (!im || !im.complete || !im.naturalWidth) return;
+      ready = true; ctx.save(); ctx.globalAlpha = johnBlend[name] * johnAlpha;
+      ctx.translate(g.x, ground); ctx.scale(1, 1 + Math.sin(g.anim * 3) * (reduced ? .002 : .006)); ctx.translate(-g.x, -ground);
+      ctx.drawImage(im, g.x - JOHN_FEET[0] * k, ground - JOHN_FEET[1] * k, JOHN_W * k, JOHN_H * k);
+      ctx.restore();
+    });
+    return ready;
   }
 
   function drawGezine() {
-    if (johnT >= 0 && drawJohn()) return; // John has her now
-    const name = frame(), im = imgs[name];
-    const s = gh / SPRITE_H;
+    const s = gh / SPRITE_H, amount = reduced ? 0.3 : 1;
     ctx.fillStyle = "rgba(0, 0, 0, .12)";
-    ctx.beginPath();
-    ctx.ellipse(g.x, ground + 3, gh * 0.32, gh * 0.05, 0, 0, Math.PI * 2);
-    ctx.fill();
-    if (!im || !im.complete || !im.naturalWidth) return;
-    const [ax, gy] = ANCHORS[name];
-    const flip = g.dir < 0 && !name.startsWith("wave");
-    ctx.save();
-    ctx.translate(g.x, ground);
-    if (flip) ctx.scale(-1, 1);
-    if (g.stun > 0 && !g.dead && Math.floor(g.stun * 12) % 2) ctx.globalAlpha = 0.6;
-    ctx.drawImage(im, -ax * s, -gy * s, im.naturalWidth * s, im.naturalHeight * s);
-    ctx.restore();
+    ctx.beginPath(); ctx.ellipse(g.x, ground + 3, gh * 0.32, gh * 0.05, 0, 0, Math.PI * 2); ctx.fill();
+    const bob = Math.sin(g.anim * 11 * Math.PI / 2) * Math.min(1, Math.abs(g.vx) / 300) * gh * 0.018 * amount;
+    Object.keys(gezBlend).forEach((name) => {
+      const im = imgs[name.split(":")[0]];
+      if (!im || !im.complete || !im.naturalWidth) return;
+      const pose = name.split(":")[0], anchor = ANCHORS[pose], flip = name.split(":")[1] === "-1" && !pose.startsWith("wave");
+      const jumpStretch = g.jump > 0 ? Math.sin((0.6 - g.jump) / 0.6 * Math.PI * 2) * 0.045 : 0;
+      const squash = (catchSquash * 0.12 - jumpStretch) * amount;
+      ctx.save(); ctx.globalAlpha = gezBlend[name] * (1 - johnAlpha);
+      if (g.stun > 0 && !g.dead) ctx.globalAlpha *= 0.8 + 0.2 * Math.cos(g.stun * 25);
+      ctx.translate(g.x, ground + bob);
+      ctx.rotate(lean * 0.1 * amount + (g.stun > 0 ? Math.sin(g.anim * 32) * Math.min(1, g.stun * 3) * 0.06 * amount : 0));
+      ctx.scale((flip ? -1 : 1) * (1 + squash), 1 - squash + Math.sin(g.anim * 3) * 0.015 * amount);
+      ctx.drawImage(im, -anchor[0] * s, -anchor[1] * s, im.naturalWidth * s, im.naturalHeight * s);
+      ctx.restore();
+    });
+    if (johnT >= 0) drawJohn();
   }
 
   function roundRect(x, y, w, h, r) {
@@ -555,7 +578,26 @@
   function drawItem(it) {
     const s = it.size;
     ctx.save();
-    ctx.translate(it.x, it.y);
+    ctx.translate(it.x + Math.sin(it.age * 2.3 + it.phase) * s * (reduced ? 0.04 : 0.18), it.y);
+    const arrival = ease(it.age / 0.16);
+    ctx.globalAlpha = arrival * it.fade;
+    ctx.scale(0.8 + 0.2 * arrival, 0.8 + 0.2 * arrival);
+    ctx.rotate(Math.sin(it.age * 2 + it.phase) * (reduced ? 0.035 : 0.16));
+    const im = imgs["item-" + it.kind];
+    if (im && im.complete && im.naturalWidth) {
+      const w = it.kind === "token" ? Math.max(it.half * 2, s * 2.6) : s * 2.2;
+      const h = w * im.naturalHeight / im.naturalWidth;
+      ctx.drawImage(im, -w / 2, -h / 2, w, h);
+      if (it.kind === "token") {
+        // Cover the baked-in VAR inside the pink bubble, preserving its outline/tail.
+        ctx.fillStyle = "#fda9c1";
+        roundRect(-w * 0.37, -h * 0.29, w * 0.74, h * 0.46, h * 0.08); ctx.fill();
+        ctx.fillStyle = "#141a2b"; ctx.font = "bold " + Math.round(s) + "px " + MONO;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(it.text, 0, -h * 0.06, w * 0.73);
+      }
+      ctx.restore(); return;
+    }
     ctx.lineWidth = Math.max(1.5, s * 0.1);
     ctx.strokeStyle = "#141a2b";
     if (it.kind === "note") {
@@ -643,10 +685,10 @@
     // HUD: score top left, hearts top middle (the buttons are top right)
     ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillStyle = "#111";
     ctx.font = "bold 26px Georgia, serif";
-    ctx.fillText(score.toLocaleString(), 14, 14);
+    ctx.fillText(Math.round(shownScore).toLocaleString(), 14, 14);
     const mult = Math.min(5, 1 + Math.floor(combo / 10));
     ctx.font = "15px Georgia, serif";
-    ctx.fillText(mult > 1 ? "combo x" + mult : "best " + best.toLocaleString(), 14, 46);
+    ctx.fillText(mult > 1 ? "combo x" + shownMult.toFixed(1).replace(/\.0$/, "") : "best " + Math.round(shownBest).toLocaleString(), 14, 46);
     const narrow = W < 480; // phones: hearts under the score, clear of the buttons
     for (let i = 0; i < 3; i++) heart((narrow ? 24 : W / 2 - 30) + i * 30, narrow ? 84 : 34, 10, i < lives);
 
@@ -658,12 +700,34 @@
 
   function loop(now) {
     raf = 0;
-    if (state !== "play" && state !== "dying") return;
+    if (!root || root.hidden) return;
     const dt = Math.min(0.05, (now - last) / 1000 || 0);
     last = now;
-    update(dt);
+    pollPad();
+    if (state === "play" || state === "dying") update(dt);
+    else if (g) g.anim += dt;
+    if (g) {
+      const a = 1 - Math.exp(-dt * 18);
+      shownScore += (score - shownScore) * a;
+      shownBest += (best - shownBest) * a;
+      shownMult += (Math.min(5, 1 + Math.floor(combo / 10)) - shownMult) * a;
+      lean += (g.vx / 650 - lean) * (1 - Math.exp(-dt * 10));
+      const steps = Math.max(1, Math.ceil(dt / 0.008)), step = dt / steps;
+      for (let i = 0; i < steps; i++) {
+        catchVelocity += (-catchSquash * 300 - catchVelocity * 22) * step;
+        catchSquash += catchVelocity * step;
+      }
+      blend(gezBlend, frame() + ":" + g.dir, dt);
+      if (johnT >= 0) blend(johnBlend, johnFrame(), dt);
+      const im = johnT >= 0 ? imgs[johnFrame()] : null;
+      johnAlpha += ((im && im.complete && im.naturalWidth ? 1 : 0) - johnAlpha) * a;
+    }
+    panelOpacity += (panelTarget - panelOpacity) * (1 - Math.exp(-dt * 26));
+    panel.style.opacity = String(panelOpacity);
+    panel.style.transform = "translate(-50%, -50%) translateY(" + ((1 - panelOpacity) * (reduced ? 3 : 12)) + "px) scale(" + (0.98 + panelOpacity * 0.02) + ")";
+    if (!panelTarget && panelOpacity < 0.005) panel.hidden = true;
     draw();
-    if (state === "play" || state === "dying") raf = requestAnimationFrame(loop);
+    if (root && !root.hidden && !raf) raf = requestAnimationFrame(loop);
   }
   function run() { last = performance.now(); if (!raf) raf = requestAnimationFrame(loop); }
 
@@ -678,7 +742,7 @@
       row.append(b);
     }
     panel.append(row);
-    panel.hidden = false;
+    panel.hidden = false; panelTarget = 1; panel.style.pointerEvents = "";
     panel.scrollTop = 0;
     const f = (focusSel && panel.querySelector(focusSel)) || row.querySelector("button");
     if (f) f.focus({ preventScroll: true });
@@ -710,7 +774,7 @@
 
   function start() {
     reset();
-    panel.hidden = true;
+    panelTarget = 0; panel.style.pointerEvents = "none";
     pauseBtn.hidden = false;
     state = "play";
     runId = null;
@@ -729,7 +793,7 @@
 
   function resume() {
     if (state !== "paused") return;
-    panel.hidden = true;
+    panelTarget = 0; panel.style.pointerEvents = "none";
     pauseBtn.hidden = false;
     state = "play";
     run();
@@ -794,10 +858,9 @@
     root.hidden = false;
     document.documentElement.style.overflow = "hidden";
     padPrev = [];
-    if (!padRaf) padRaf = requestAnimationFrame(pollPad);
     state = "loading";
     W = 0; resize();
-    reset();
+    reset(); run();
     showPanel("<h2>DMCA Dodge</h2><p>Putting her headset on...</p>", []);
     await Promise.all([loadSprites(), Promise.race([loadCode(), new Promise((ok) => setTimeout(ok, 2500))])]);
     if (!root.hidden) title(reason);

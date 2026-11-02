@@ -20,7 +20,7 @@
   window.GezArcade.register({
     id: "lullaby",
     title: "Lua Lullaby",
-    art: "images/peek/pepsipu.png",
+    art: "images/lullaby/pepsipu/1.png",
     blurb: "A little Lua in the save data, a little song at bedtime. Help pepsipu sing gezine to sleep!",
     unit: "points",
     board: true,
@@ -36,8 +36,11 @@
         style.textContent = `
           .lullaby-root { width:100%; max-width:920px; height:100%; max-height:860px; min-height:300px; display:flex; flex-direction:column; color:#141a2b; background:#e6e4f6; border-radius:20px; overflow:hidden; font-family:"Nunito",sans-serif; position:relative; }
           .lullaby-hud { padding:8px 12px 5px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:4px 10px; font-size:13px; font-weight:800; background:#f4f2fb; }
-          .lullaby-meter { width:95px; height:12px; vertical-align:middle; accent-color:#f06292; }
-          .lullaby-mute { border:1px solid #7f86ac; border-radius:12px; padding:4px 9px; background:#e6f1fd; color:#141a2b; font:inherit; cursor:pointer; }
+          .lullaby-meter { display:inline-block; width:95px; height:12px; vertical-align:middle; background:#e1deed; border-radius:8px; overflow:hidden; }
+          .lullaby-meter-fill { display:block; height:100%; background:#f06292; border-radius:8px; transform-origin:left; transform:scaleX(0); }
+          .lullaby-mute { border:1px solid #7f86ac; border-radius:12px; padding:4px 9px; background:#e6f1fd; color:#141a2b; font:inherit; cursor:pointer; transition:transform 120ms ease, background 120ms ease; }
+          .lullaby-mute:hover { background:#fde7ef; }
+          .lullaby-mute:active { transform:scale(.95); }
           .lullaby-field { flex:1; min-height:180px; position:relative; }
           .lullaby-canvas { display:block; width:100%; height:100%; }
           .lullaby-lanes { position:absolute; inset:0; display:flex; }
@@ -45,24 +48,39 @@
           .lullaby-lane:focus-visible { outline:3px solid #f06292; outline-offset:-5px; }
           .lullaby-help { margin:0; padding:5px 8px 8px; background:#f4f2fb; text-align:center; font-size:12px; font-weight:700; }
           .lullaby-start { position:absolute; top:47%; left:10%; width:80%; padding:18px; border:2px solid #141a2b; border-radius:18px; background:#fde7ef; color:#141a2b; font:600 20px "Fredoka",sans-serif; cursor:pointer; }
-          .lullaby-start[hidden] { display:none; }
+          .lullaby-start { transition:opacity 160ms ease, transform 160ms ease; }
+          .lullaby-start:hover { transform:scale(1.02); }
+          .lullaby-start:active { transform:scale(.98); }
+          .lullaby-start[hidden] { display:block; opacity:0; transform:scale(.96); pointer-events:none; }
           @media (prefers-reduced-motion:reduce) { .lullaby-root * { scroll-behavior:auto; } }
         `;
         document.head.appendChild(style);
       }
       const root = document.createElement("div");
       root.className = "lullaby-root";
-      root.innerHTML = '<div class="lullaby-hud"><span class="lullaby-combo">0 combo · best 0</span><label>Sleepy <progress class="lullaby-meter" max="1" value="0" aria-label="Gezine sleepiness"></progress></label><button type="button" class="lullaby-mute" aria-pressed="false">Sound on</button></div>' +
+      root.innerHTML = '<div class="lullaby-hud"><span class="lullaby-combo">0 combo · best 0</span><label>Sleepy <span class="lullaby-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Gezine sleepiness"><span class="lullaby-meter-fill"></span></span></label><button type="button" class="lullaby-mute" aria-pressed="false">Sound on</button></div>' +
         '<div class="lullaby-field"><canvas class="lullaby-canvas" role="img" aria-label="Pepsipu sings under the moon. Lua word bubbles descend to the three-lane ribbon."></canvas><div class="lullaby-lanes"><button type="button" class="lullaby-lane" aria-label="Left lane: A, J, left arrow">Left</button><button type="button" class="lullaby-lane" aria-label="Middle lane: S, K, down arrow">Middle</button><button type="button" class="lullaby-lane" aria-label="Right lane: D, L, right arrow">Right</button></div><button type="button" class="lullaby-start" hidden>Tap to start the quiet lullaby ♪</button></div>' +
         '<p class="lullaby-help">Meet the ribbon: A S D · J K L · ← ↓ → · or tap lanes</p>';
       api.stage.appendChild(root);
       const canvas = root.querySelector("canvas"), ctx = canvas.getContext("2d");
-      const comboEl = root.querySelector(".lullaby-combo"), meter = root.querySelector("progress");
+      const comboEl = root.querySelector(".lullaby-combo"), meter = root.querySelector(".lullaby-meter");
       const mute = root.querySelector(".lullaby-mute"), startButton = root.querySelector(".lullaby-start");
       const buttons = Array.prototype.slice.call(root.querySelectorAll(".lullaby-lane"));
       const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const pepsi = new Image(), gezine = new Image();
-      pepsi.src = "images/peek/pepsipu.png"; gezine.src = "images/good/0.png";
+      function sprites(name) {
+        return [0, 1, 2, 3].map(function (i) {
+          const img = new Image(); img.src = "images/lullaby/" + name + "/" + i + ".png"; return img;
+        });
+      }
+      const pepsi = sprites("pepsipu"), gezine = sprites("gezine");
+      function pose() { return { index: 0, elapsed: 0.08, from: [1, 0, 0, 0], weights: [1, 0, 0, 0] }; }
+      const pepsiPose = pose(), gezinePose = pose();
+      const meterFill = root.querySelector(".lullaby-meter-fill");
+      // Presentation only: waking up never deducts earned points or changes the ending threshold.
+      let sleepy = 0, shownSleep = 0, shownScore = 0, shownCombo = 0, shownBest = 0;
+      let lastFrame = null, visualTime = 0, messageStart = 0;
+      let resizePending = true, resizeObserver = null;
+      let paintedScore = -1, paintedCombo = "", paintedSleep = -1;
       const chart = [];
       let beat = 0;
       PHRASES.forEach(function (phrase, p) {
@@ -86,17 +104,27 @@
         if (!started) return 0;
         return audio ? audio.currentTime - origin : (performance.now() - wallOrigin) / 1000;
       }
-      function hud() {
-        api.score(score + " pts");
-        comboEl.textContent = combo + " combo · best " + best;
-        meter.value = earned / 6400;
+      function ease(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
+      function hud(dt) {
+        const blend = 1 - Math.exp(-dt * 16);
+        shownScore += (score - shownScore) * blend;
+        shownCombo += (combo - shownCombo) * blend;
+        shownBest += (best - shownBest) * blend;
+        shownSleep += (sleepy - shownSleep) * (1 - Math.exp(-dt * 7));
+        const value = Math.round(shownScore), text = Math.round(shownCombo) + " combo · best " + Math.round(shownBest);
+        if (paintedScore !== value) { api.score(value + " pts"); paintedScore = value; }
+        if (paintedCombo !== text) { comboEl.textContent = text; paintedCombo = text; }
+        meterFill.style.transform = "scaleX(" + shownSleep + ")";
+        const percent = Math.round(shownSleep * 100);
+        if (percent !== paintedSleep) { meter.setAttribute("aria-valuenow", String(percent)); paintedSleep = percent; }
       }
       function feedback(text, color, t) {
-        message = text; messageColor = color; messageUntil = t + 0.85;
+        message = text; messageColor = color; messageStart = t; messageUntil = t + 0.85;
       }
       function miss(note, t) {
-        note.judged = true; combo = 0;
-        feedback("Miss · the moon still loves you", "#fde7ef", t); hud();
+        note.judged = true; note.exit = t; note.hit = false; combo = 0;
+        sleepy = Math.max(0, sleepy - 0.035);
+        feedback("Miss · the moon still loves you", "#fde7ef", t);
       }
       function expire(t) {
         chart.forEach(function (n) { if (!n.judged && t - n.time > GOOD) miss(n, t); });
@@ -113,14 +141,14 @@
         });
         if (!nearest) {
           // Empty taps break combo, preventing mash-to-win without punishing score.
-          combo = 0; feedback(t < INTRO - GOOD ? "Follow the falling Lua ♪" : "Gently… wait for the ribbon", "#e6f1fd", t); hud(); return;
+          combo = 0; sleepy = Math.max(0, sleepy - 0.015); feedback(t < INTRO - GOOD ? "Follow the falling Lua ♪" : "Gently… wait for the ribbon", "#e6f1fd", t); return;
         }
-        nearest.judged = true; combo++; best = Math.max(best, combo);
+        nearest.judged = true; nearest.exit = t; nearest.hit = true; combo++; best = Math.max(best, combo);
         const base = distance <= PERFECT ? 100 : 50;
         const points = base + Math.min(50, 2 * combo);
         score += points; earned += base;
+        sleepy = Math.min(1, sleepy + base / 6400);
         feedback((base === 100 ? "Perfect ♡" : "Good ♪") + " +" + points, base === 100 ? "#ffe6a6" : "#c9f4eb", t);
-        hud();
       }
       buttons.forEach(function (button, lane) {
         listen(button, "touchstart", function (e) { e.preventDefault(); lastTouch = performance.now(); hit(lane); }, { passive: false });
@@ -148,7 +176,8 @@
       function begin() {
         if (started || stopped) return;
         started = true; origin = audio ? audio.currentTime : 0; wallOrigin = performance.now();
-        startButton.hidden = true;
+        visualTime = 0;
+        startButton.hidden = true; startButton.disabled = true;
         if (audio) schedule();
       }
       function unlock() {
@@ -179,14 +208,38 @@
       function label(text, x, y, size, color) {
         ctx.fillStyle = color; ctx.font = '600 ' + size + 'px "Fredoka", sans-serif'; ctx.textAlign = "center"; ctx.fillText(text, x, y);
       }
-      function character(img, x, y, w, h, name) {
-        if (img.complete && img.naturalWidth) ctx.drawImage(img, x, y, w, h);
-        else { rounded(x, y, w, h, 20, "#fde7ef", "#141a2b"); label(name, x + w / 2, y + h / 2, 14, "#141a2b"); }
+      function updatePose(state, index, dt) {
+        if (index !== state.index) {
+          state.from = state.weights.slice(); state.index = index; state.elapsed = 0;
+        }
+        state.elapsed += dt;
+        const mix = ease(state.elapsed / 0.08);
+        for (let i = 0; i < 4; i++) state.weights[i] = state.from[i] * (1 - mix) + (i === index ? mix : 0);
       }
-      function draw(t) {
-        const rect = canvas.getBoundingClientRect();
-        const dpr = Math.min(2, window.devicePixelRatio || 1);
-        if (width !== rect.width || height !== rect.height || ratio !== dpr) {
+      function character(images, state, x, y, size, name, sway, bob, lean, breath) {
+        ctx.save(); ctx.translate(x + size / 2 + sway, y + size + bob); ctx.rotate(lean); ctx.scale(1, breath);
+        for (let i = 0; i < 4; i++) {
+          if (state.weights[i] < 0.001) continue;
+          const img = images[i];
+          ctx.save(); ctx.globalAlpha *= state.weights[i];
+          if (img.complete && img.naturalWidth) {
+            const scale = size / Math.max(img.naturalWidth, img.naturalHeight);
+            const iw = img.naturalWidth * scale, ih = img.naturalHeight * scale;
+            ctx.drawImage(img, -iw / 2, -ih, iw, ih);
+          } else {
+            rounded(-size / 2, -size, size, size, 20, "#fde7ef", "#141a2b");
+            label(name, 0, -size / 2, 14, "#141a2b");
+            label(name === "gezine" ? ["♡", "yawn…", "z z", "Zzz ♡"][i] : ["♪", "♫", "♪", "♡"][i], 0, -size / 4, 16, "#71769c");
+          }
+          ctx.restore();
+        }
+        ctx.restore();
+      }
+      function draw(t, dt) {
+        if (resizePending) {
+          const rect = canvas.getBoundingClientRect();
+          const dpr = Math.min(2, window.devicePixelRatio || 1);
+          resizePending = false;
           width = Math.max(1, rect.width); height = Math.max(1, rect.height); ratio = dpr;
           canvas.width = Math.round(width * ratio); canvas.height = Math.round(height * ratio);
         }
@@ -196,68 +249,88 @@
         ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
         for (let i = 0; i < 23; i++) {
           const x = ((i * 79 + 29) % 997) / 997 * w, y = 12 + ((i * 37) % 113) / 113 * scene;
-          label("✦", x, y, 8 + i % 5, "#f9eacc");
+          ctx.save();
+          const twinkle = Math.sin(visualTime * (0.8 + i % 4 * 0.19) + i * 2.4);
+          ctx.globalAlpha = 0.65 + twinkle * (reduced ? 0.12 : 0.3);
+          label("✦", x, y, (8 + i % 5) * (1 + twinkle * (reduced ? 0.02 : 0.1)), "#f9eacc");
+          ctx.restore();
         }
         ctx.fillStyle = "#fff0c9"; ctx.beginPath(); ctx.arc(w / 2, scene * 0.35, 22, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = "#555782"; ctx.beginPath(); ctx.arc(w / 2 + 10, scene * 0.35 - 6, 20, 0, Math.PI * 2); ctx.fill();
         const size = Math.min(w * 0.24, scene * 0.9), gx = w - size - 18, gy = scene - size;
-        character(pepsi, 18, scene - size * 0.87, size, size * 0.87, "pepsipu");
-        character(gezine, gx, gy, size, size * 1.05, "gezine");
-        const sleep = earned / 6400;
-        if (sleep > 0.15) {
-          // The source eyes sit at about 31% / 47% width, 42% height.
-          [0.31, 0.47].forEach(function (eye) {
-            const ex = gx + size * eye, ey = gy + size * 1.05 * 0.40;
-            rounded(ex - size * 0.067, ey, size * 0.135, size * 0.105 * Math.min(1, sleep / 0.65), 3, "#e1dee3");
-            ctx.beginPath(); ctx.moveTo(ex - size * 0.062, ey + size * 0.1 * Math.min(1, sleep / 0.65));
-            ctx.quadraticCurveTo(ex, ey + size * 0.14, ex + size * 0.062, ey + size * 0.1 * Math.min(1, sleep / 0.65));
-            ctx.strokeStyle = "#343247"; ctx.lineWidth = 2; ctx.stroke();
-          });
-        }
-        if (sleep > 0.42) {
-          ctx.beginPath(); ctx.moveTo(gx + size * 0.16, gy + size * 0.23); ctx.lineTo(gx + size * 0.47, gy - size * 0.03); ctx.lineTo(gx + size * 0.69, gy + size * 0.24); ctx.closePath(); ctx.fillStyle = "#b4c8ed"; ctx.fill();
-          rounded(gx + size * 0.14, gy + size * 0.2, size * 0.57, size * 0.07, 3, "#fde7ef");
-          label("✦", gx + size * 0.48, gy + size * 0.03, 12, "#fff0c9");
-        }
-        if (sleep >= 0.65) label("z z Z", gx + size * 0.65, gy + size * 0.05, 16, "#fff0c9");
+        const sleep = shownSleep, gentle = reduced ? 0.3 : 1;
+        const phase = (visualTime - INTRO) / BEAT * Math.PI * 2;
+        const songBeat = Math.max(0, Math.floor((t - INTRO) / BEAT));
+        updatePose(pepsiPose, started && t >= INTRO && t < 75 ? [0, 1, 2, 3][songBeat % 4] : 0, dt);
+        updatePose(gezinePose, sleep < 0.25 ? 0 : sleep < 0.55 ? 1 : sleep < 0.85 ? 2 : 3, dt);
+        character(pepsi, pepsiPose, 18, scene - size, size, "pepsipu",
+          -Math.cos(phase / 4) * size * 0.035 * gentle, Math.cos(phase) * size * 0.009 * gentle,
+          -Math.cos(phase / 4) * 0.045 * gentle, 1 + Math.sin(phase / 2) * 0.012 * gentle);
+        character(gezine, gezinePose, gx, gy, size, "gezine",
+          Math.sin(visualTime * 0.65) * size * 0.025 * sleep * gentle,
+          Math.sin(visualTime * 1.3) * size * 0.008 * gentle,
+          (Math.sin(visualTime * 0.65) * 0.045 + 0.035) * sleep * gentle,
+          1 + Math.sin(visualTime * 1.3) * 0.015 * gentle);
         label("pepsipu ♪", 18 + size / 2, scene + 9, 12, "#fff4fa");
-        label(sleep >= 0.65 ? "gezine.sleep()" : "gezine", gx + size / 2, scene + 9, 12, "#fff4fa");
-        if (t < 75) label(reduced ? "♪" : (Math.floor(t / BEAT) % 2 ? "♫" : "♪"), 28 + size, scene * 0.6, 22, "#ffe6a6");
+        label(sleep >= 0.85 ? "gezine.sleep()" : "gezine", gx + size / 2, scene + 9, 12, "#fff4fa");
+        ctx.save(); ctx.globalAlpha = (1 - ease((t - 74.8) / 0.2)) * (0.7 + 0.25 * Math.sin(phase));
+        label("♪", 28 + size, scene * 0.6 + Math.sin(phase / 2) * 3 * gentle, 22, "#ffe6a6"); ctx.restore();
         for (let lane = 0; lane < 3; lane++) {
           rounded(lane * laneW + 5, top, laneW - 10, h - top - 5, 13, lane % 2 ? "rgba(230,241,253,.24)" : "rgba(253,231,239,.24)");
-          if (t - pulses[lane] < 0.16) rounded(lane * laneW + 7, line - 24, laneW - 14, 48, 14, "rgba(255,246,211,.55)");
+          const pulseAge = t - pulses[lane];
+          ctx.save(); ctx.globalAlpha = ease(pulseAge / 0.04) * (1 - ease(pulseAge / 0.2));
+          rounded(lane * laneW + 7, line - 24, laneW - 14, 48, 14, "rgba(255,246,211,.55)"); ctx.restore();
           label(["A · J · ←", "S · K · ↓", "D · L · →"][lane], laneW * (lane + 0.5), h - 12, Math.min(14, laneW / 8), "#30364e");
         }
         ctx.strokeStyle = "#fff4fa"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(9, line); ctx.lineTo(w - 9, line); ctx.stroke();
         chart.forEach(function (note) {
-          if (note.judged) return;
-          const until = note.time - t;
-          if (until > 2.7 || until < -GOOD) return;
-          const y = line - until / 2.7 * (line - top - 19), x = laneW * (note.lane + 0.5), bw = Math.min(108, laneW - 16);
-          rounded(x - bw / 2, y - 16, bw, 32, 12, ["#fde7ef", "#e6f1fd", "#e6f6e9"][note.lane], "#71769c");
-          label(note.word, x, y + 5, Math.min(16, bw / 6), "#141a2b");
+          const age = note.judged ? t - note.exit : 0;
+          if (note.judged && age > 0.2) return;
+          const until = note.time - (note.judged ? note.exit : t);
+          if (until > 2.7 || (!note.judged && until < -GOOD)) return;
+          // Ease the first part of the glide, then retain exact ribbon timing and speed.
+          const progress = 1 - until / 2.7;
+          const arrival = progress < 0.3 ? 0.3 * (2 * Math.pow(progress / 0.3, 2) - Math.pow(progress / 0.3, 3)) : progress;
+          const y = top + 19 + arrival * (line - top - 19), x = laneW * (note.lane + 0.5), bw = Math.min(108, laneW - 16);
+          const spring = note.hit ? Math.sin(age * 30) * Math.exp(-age * 10) * 0.3 : 0;
+          ctx.save(); ctx.globalAlpha = ease(progress / 0.06) * (note.judged ? 1 - ease(age / 0.2) : 1);
+          ctx.translate(x, y - (note.hit ? ease(age / 0.2) * 12 * (reduced ? 0.3 : 1) : 0));
+          const scale = 1 + spring * (reduced ? 0.3 : 1); ctx.scale(scale, scale);
+          rounded(-bw / 2, -16, bw, 32, 12, ["#fde7ef", "#e6f1fd", "#e6f6e9"][note.lane], "#71769c");
+          label(note.word, 0, 5, Math.min(16, bw / 6), "#141a2b"); ctx.restore();
         });
         if (!started || t < INTRO - 0.35) {
-          label(started ? "Ready… " + Math.max(1, Math.ceil((INTRO - t) / BEAT)) : "A little Lua, a lot of dreams", w / 2, top + 35, Math.min(22, w / 17), "#fff4fa");
+          ctx.save(); ctx.globalAlpha = started ? 1 - ease((t - INTRO + 0.55) / 0.2) : 1;
+          label(started ? "Ready… " + Math.max(1, Math.ceil((INTRO - t) / BEAT)) : "A little Lua, a lot of dreams", w / 2, top + 35, Math.min(22, w / 17), "#fff4fa"); ctx.restore();
         }
         if (t > 75) {
+          ctx.save(); ctx.globalAlpha = ease((t - 75) / 0.18);
+          ctx.translate(0, (1 - ctx.globalAlpha) * 8);
           rounded(15, top + 12, w - 30, 63, 16, "#f4f2fb");
-          label(sleep >= 0.65 ? "Shhh… save file, sweet dreams ♡" : "One more bedtime story?", w / 2, top + 38, Math.min(20, w / 20), "#555782");
-          label(sleep >= 0.65 ? "gezine is fast asleep." : "gezine is still wide awake!", w / 2, top + 59, 13, "#555782");
+          label(earned >= 4160 ? "Shhh… save file, sweet dreams ♡" : "One more bedtime story?", w / 2, top + 38, Math.min(20, w / 20), "#555782");
+          label(earned >= 4160 ? "gezine is fast asleep." : "gezine is still wide awake!", w / 2, top + 59, 13, "#555782"); ctx.restore();
         } else if (t < messageUntil && t >= INTRO - 0.35) {
+          ctx.save(); ctx.globalAlpha = ease((t - messageStart) / 0.08) * (1 - ease((t - messageUntil + 0.15) / 0.15));
+          ctx.translate(0, (1 - ctx.globalAlpha) * 5);
           rounded(15, top + 8, w - 30, 34, 12, "#555782");
-          label(message, w / 2, top + 31, Math.min(19, w / 22), messageColor);
+          label(message, w / 2, top + 31, Math.min(19, w / 22), messageColor); ctx.restore();
         }
       }
-      function frame() {
+      function frame(timestamp) {
         if (stopped) return;
-        const t = now();
+        const t = now(), dt = lastFrame === null ? 0 : Math.min(0.05, Math.max(0, (timestamp - lastFrame) / 1000));
+        lastFrame = timestamp;
+        // Follow the audio clock, limiting visual catch-up after a suspended tab.
+        if (started) {
+          const predicted = visualTime + dt;
+          visualTime = predicted + Math.max(-dt, Math.min(dt, t - predicted));
+        } else visualTime += dt;
         if (started) {
           expire(t);
           const second = Math.floor(t);
           if (second !== lastSecond) { lastSecond = second; api.status(Math.max(0, Math.ceil(END - t)) + "s · 80 BPM"); }
         }
-        draw(t);
+        hud(dt); draw(t, dt);
         if (started && t >= END) {
           api.end(score, earned >= 4160 ? "Lua ran. Gezine slept. Sweet dreams ♡" : "return nil… gezine wants an encore!");
           return;
@@ -266,11 +339,17 @@
       }
       api.onStop(function () {
         stopped = true; cancelAnimationFrame(raf);
+        if (resizeObserver) resizeObserver.disconnect();
         listeners.forEach(function (remove) { remove(); });
         voices.forEach(function (v) { try { v.oscillator.stop(); } catch (e) {} v.oscillator.disconnect(); v.gain.disconnect(); });
         if (audio) { try { const closed = audio.close(); if (closed && closed.catch) closed.catch(function () {}); } catch (e) {} }
       });
-      hud(); api.status("78s · original lullaby");
+      listen(window, "resize", function () { resizePending = true; });
+      if (window.ResizeObserver) {
+        resizeObserver = new window.ResizeObserver(function () { resizePending = true; });
+        resizeObserver.observe(root.querySelector(".lullaby-field"));
+      }
+      hud(0); api.status("78s · original lullaby");
       try { const AC = window.AudioContext || window.webkitAudioContext; if (AC) audio = new AC(); } catch (e) {}
       if (audio) { startButton.hidden = false; unlock(); }
       else { mute.disabled = true; mute.textContent = "Silent lullaby"; begin(); }
