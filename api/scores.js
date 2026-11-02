@@ -11,8 +11,9 @@
 const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
-const BOARD = "lb:headset";
-const DEVICES = "lb:headset:device"; // name -> the device their best score was set on
+// every key starts with "gez:" because this database is shared with other projects
+const BOARD = "gez:lb:headset";
+const DEVICES = "gez:lb:headset:device"; // name -> the device their best score was set on
 const TOP_N = 10;
 const RUN_TTL = 2 * 60 * 60;        // a run id lasts 2 hours
 const MAX_POINTS_PER_SECOND = 30;   // comfortably above what a perfect player can manage
@@ -51,7 +52,7 @@ async function top() {
 
 async function limited(request, kind) {
   const ip = (request.headers.get("x-forwarded-for") || "unknown").split(",")[0].trim();
-  const bucket = `rl:lb:${kind}:${ip}:${Math.floor(Date.now() / 60000)}`;
+  const bucket = `gez:rl:lb:${kind}:${ip}:${Math.floor(Date.now() / 60000)}`;
   const [used] = await redis([["INCR", bucket], ["EXPIRE", bucket, 70]]);
   return used > LIMITS[kind];
 }
@@ -85,7 +86,7 @@ export async function POST(request) {
     if (new URL(request.url).searchParams.has("start")) {
       if (await limited(request, "start")) return reply({ error: "Slow down a little" }, 429);
       const run = crypto.randomUUID();
-      await redis([["SET", `run:${run}`, Date.now(), "EX", RUN_TTL]]);
+      await redis([["SET", `gez:run:${run}`, Date.now(), "EX", RUN_TTL]]);
       return reply({ run });
     }
 
@@ -99,7 +100,7 @@ export async function POST(request) {
     const checked = cleanName(body.name);
     if (checked.error) return reply({ error: checked.error }, 400);
 
-    const [startedAt] = await redis([["GETDEL", `run:${run}`]]); // single use
+    const [startedAt] = await redis([["GETDEL", `gez:run:${run}`]]); // single use
     if (!startedAt) return reply({ error: "That game already ended or expired" }, 400);
     const seconds = (Date.now() - Number(startedAt)) / 1000;
     if (score > 20 + seconds * MAX_POINTS_PER_SECOND) return reply({ error: "That score is faster than humanly possible" }, 400);

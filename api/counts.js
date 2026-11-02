@@ -8,7 +8,8 @@
 const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
-const KEYS = { headpat: "count:headpats", respect: "count:respects" };
+// every key starts with "gez:" because this database is shared with other projects
+const KEYS = { headpat: "gez:count:headpats", respect: "gez:count:respects" };
 const MAX_PER_REQUEST = 25;
 const MAX_PER_MINUTE = 300; // per visitor, so a script can't run the numbers up
 
@@ -53,7 +54,7 @@ export async function POST(request) {
   try {
     // simple per-visitor rate limit, one bucket per minute
     const ip = (request.headers.get("x-forwarded-for") || "unknown").split(",")[0].trim();
-    const bucket = `rl:${ip}:${Math.floor(Date.now() / 60000)}`;
+    const bucket = `gez:rl:${ip}:${Math.floor(Date.now() / 60000)}`;
     const [used] = await redis([["INCRBY", bucket, n], ["EXPIRE", bucket, 70]]);
     if (used > MAX_PER_MINUTE) return reply({ ...(await totals()), limited: true }, 429);
 

@@ -14,7 +14,7 @@ Is gezine being a good boy? A satire site: https://gezinegoodboy.vercel.app
 
 ## Database (counters and leaderboard)
 
-`api/counts.js` and `api/scores.js` need an Upstash Redis database connected to the Vercel project.
+`api/counts.js` and `api/scores.js` use the Upstash Redis database `webhook-kv` (shared with other projects, so every key starts with `gez:`).
 Vercel dashboard → this project → Storage → Create Database → Upstash for Redis (free plan) → Connect.
 That sets `KV_REST_API_URL` and `KV_REST_API_TOKEN`; redeploy afterwards. Until then the counters are
 hidden and the leaderboard says it's offline (the game itself still works).
