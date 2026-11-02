@@ -85,7 +85,8 @@ body.bad .verdict { color: #c62828; color: var(--red); }
 #gez { position: absolute; left: 6.19%; bottom: 2%; width: 87.62%; transform-origin: 44.12% 98.1%; transition: transform 1s ease-in-out; }
 #gez.far { transform: translate(10.06%, 1.77%) scale(.693); }
 #gez img { display: block; width: 100%; height: auto; transform-origin: 50% 100%; }
-#john-img { position: absolute; top: 0; left: 0; width: 100%; height: auto; }
+.john-anim { position: absolute; top: 0; left: 0; width: 100%; transform-origin: 50% 100%; }
+#john-img { display: block; width: 100%; height: auto; }
 
 /* the motion lives on a wrapper so the crossfading old frame moves with the new one */
 .gez-anim { position: relative; transform-origin: 50% 100%; will-change: transform; }
@@ -383,3 +384,20 @@ html.reveal main > .in { opacity: 1; transform: none; }
   html.reveal main > .card, html.reveal main > section { transform: none; transition: opacity .4s ease; }
   .game-card:hover, .credits li:hover, .stat:hover { transform: none; }
 }
+
+/* tracker gezine and John: layered continuous motion so the few drawn frames feel fluid.
+   Three loops with different lengths (sway 4.3s, bob 1.64s, breathing 2.9s) never line up the same way twice. */
+.gez-sway { transform-origin: 44% 98%; animation: gez-sway 4.3s cubic-bezier(.45, 0, .55, 1) infinite; will-change: transform; }
+@keyframes gez-sway { 0%, 100% { transform: rotate(-1.1deg); } 50% { transform: rotate(1.1deg); } }
+body.good .gez-anim { animation: bob 1.64s cubic-bezier(.45, 0, .55, 1) infinite; }
+@keyframes bob { 0%, 100% { transform: translate3d(0, 0, 0) scale(1, 1); } 50% { transform: translate3d(0, -6px, 0) scale(.99, 1.018); } }
+#gezine-img { transform-origin: 50% 100%; animation: gez-breathe 2.9s cubic-bezier(.45, 0, .55, 1) infinite; }
+@keyframes gez-breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.012, .992); } }
+body.bad .gez-sway { animation-duration: 1.3s; }
+.john-anim { animation: john-loom 2.4s cubic-bezier(.45, 0, .55, 1) infinite; will-change: transform; }
+@keyframes john-loom { 0%, 100% { transform: scale(1, 1) rotate(0); } 30% { transform: scale(1.012, .99) rotate(-.6deg); } 70% { transform: scale(.995, 1.012) rotate(.6deg); } }
+.frame-ghost { will-change: opacity; }
+@media (prefers-reduced-motion: reduce) {
+  .gez-sway, #gezine-img, .john-anim { animation: none !important; }
+}
+.legacy .gez-sway, .legacy #gezine-img { animation: none !important; }

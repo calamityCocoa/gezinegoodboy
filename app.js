@@ -15,8 +15,11 @@ const $ = (id) => document.getElementById(id);
 function show(id, text) { const el = $(id); if (el) el.textContent = text; }
 
 // Frame changes crossfade instead of snapping: the old frame fades out on top of the new one.
-function swapFrame(el, src) {
+function swapFrame(el, src, frameMs) {
   if (!el || el.getAttribute("src") === src) return;
+  // blend for about half as long as the frame was on screen, so poses melt into each other
+  const dur = Math.round(Math.max(90, Math.min(260, (frameMs || 220) * 0.5)));
+  const ease = "cubic-bezier(.4, 0, .2, 1)";
   let ghost = el._ghost;
   if (!ghost) {
     ghost = document.createElement("img");
@@ -30,10 +33,14 @@ function swapFrame(el, src) {
   ghost.style.transition = "none";
   ghost.style.opacity = "1";
   ghost.src = el.getAttribute("src");
+  el.style.transition = "none";
+  el.style.opacity = "0.35";
   el.src = src;
-  void ghost.offsetWidth; // start the fade from fully visible
-  ghost.style.transition = "opacity 110ms ease-out";
+  void ghost.offsetWidth; // start both fades from here
+  ghost.style.transition = "opacity " + dur + "ms " + ease;
   ghost.style.opacity = "0";
+  el.style.transition = "opacity " + Math.round(dur * 0.8) + "ms " + ease;
+  el.style.opacity = "1";
 }
 
 function main() {
@@ -181,7 +188,7 @@ function play(steps, loop, onDone) {
   clearTimeout(gezTimer);
   const img = $("gezine-img"), anim = $("gez-anim");
   const seq = steps.map((n) => ANIMS[n]);
-  let s = 0, i = 0;
+  let s = 0, i = 0, lastMs = 220;
   busy = seq.length > 0;
 
   const begin = (a) => {
@@ -202,7 +209,8 @@ function play(steps, loop, onDone) {
     if (s >= seq.length) busy = false;
     const a = seq[s] || ANIMS[loop];
     if (i >= a.frames.length) i = 0;
-    swapFrame(img, a.frames[i]);
+    swapFrame(img, a.frames[i], lastMs);
+    lastMs = a.ms[i];
     gezTimer = setTimeout(step, a.ms[i]);
     i++;
   };
@@ -217,7 +225,7 @@ function johnPlay(name, then) {
   let i = 0;
   const step = () => {
     if (i >= a.frames.length) return then === "loop" ? johnPlay("loop", "loop") : then();
-    swapFrame($("john-img"), a.frames[i]);
+    swapFrame($("john-img"), a.frames[i], a.ms[Math.max(0, i - 1)]);
     johnTimer = setTimeout(step, a.ms[i]);
     i++;
   };
@@ -230,7 +238,7 @@ const putDownFirst = () => (holding ? ["putdown"] : []);
 
 function showScene(on) {
   $("gez").hidden = on;
-  $("john-img").hidden = !on;
+  $("john-wrap").hidden = !on;
 }
 
 function changeMood(bad) {
