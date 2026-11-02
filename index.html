@@ -45,12 +45,13 @@
       <a href="#tracker">Tracker</a>
       <a href="#reports-card">Reports</a>
       <a href="#asmr">ASMR</a>
+      <a href="#events" class="modern-only">Events</a>
       <a href="#arcade" class="modern-only">Arcade</a>
       <a href="#credits">Credits</a>
     </nav>
   </div>
 </header>
-<div class="ticker"><marquee scrollamount="5">BREAKING NEWS: John Nintendo's lawyers have entered the chat &bull;&bull;&bull; ETA WEN? &bull;&bull;&bull; DO NOT UPDATE YOUR SWITCH 2 &bull;&bull;&bull; gezine has been spotted near a hut &bull;&bull;&bull; it's not a brick if you believe hard enough &bull;&bull;&bull; John Nintendo is watching &bull;&bull;&bull;</marquee></div>
+<div class="ticker"><marquee scrollamount="5">BREAKING NEWS: John Nintendo's lawyers have entered the chat &bull;&bull;&bull; ETA WEN? &bull;&bull;&bull; DO NOT UPDATE YOUR SWITCH 2 &bull;&bull;&bull; gezine has been spotted near a hut &bull;&bull;&bull; it's not a brick if you believe hard enough &bull;&bull;&bull; John Nintendo is watching &bull;&bull;&bull; Nintendo patches the concept of fun in firmware 22.0 &bull;&bull;&bull; John Nintendo DMCAs his own reflection &bull;&bull;&bull; Jinova finds low-level kernel exploit (he was joking) &bull;&bull;&bull; Game-Key Card revealed to be a key to nothing &bull;&bull;&bull; Nintendo trademarks the words "jail" and "break" &bull;&bull;&bull; bag of eggs not included &bull;&bull;&bull;</marquee></div>
 
 <main id="top">
 
@@ -81,6 +82,15 @@
     <p class="action-out"><span id="mood-count"></span> <span id="eta"></span></p>
     <p id="global" class="global" hidden>Everyone so far: <b id="g-pats">0</b> headpats and <b id="g-fs">0</b> respects paid.</p>
     <p class="toggle modern-only"><label><input type="checkbox" id="uwu-toggle"> uwu mode</label></p>
+  </div>
+</section>
+
+<section class="card events modern-only" id="events">
+  <h2>Live events</h2>
+  <div class="ev-grid">
+    <div id="events-live"></div>
+    <div id="events-week"></div>
+    <div id="events-goal"></div>
   </div>
 </section>
 
@@ -134,6 +144,7 @@
   <h3>Leaderboards</h3>
   <div class="board-tabs" id="board-tabs" role="tablist" aria-label="Pick a game"></div>
   <div id="game-board"><p><small>Loading...</small></p></div>
+  <details class="player-box" id="player-box"></details>
 </section>
 <section class="card legacy-only">
   <h2>gezine's Arcade</h2>
@@ -153,6 +164,8 @@
     <b class="who"><a href="https://github.com/pepsipu">pepsipu</a></b> Made <a href="https://gitlab.com/pepsipu/ns2jb">ns2jb</a> and the bootstrap.bas gezine reads in the ASMR (and that buries her in DMCA Dodge).</li>
   <li><a href="https://github.com/Gezine"><img class="avatar" src="images/credits/gezine.jpg" width="48" height="48" alt="" loading="lazy"></a>
     <b class="who"><a href="https://hackerone.com/gezine">gezine</a></b> For being a good boy (most of the time). His exploits are on <a href="https://github.com/Gezine">GitHub</a>.</li>
+  <li><a href="https://discord.com/users/1136352561381777549"><img class="avatar" src="images/credits/niftynova.jpg" width="48" height="48" alt="" loading="lazy"></a>
+    <b class="who"><a href="https://discord.com/users/1136352561381777549">NiftyNova</a></b> NiftyNifty on Discord, S2HX regular and certified legend.</li>
   <li><a href="https://www.reddit.com/user/Muveeer/"><img class="avatar" src="images/credits/muveeer.jpg" width="48" height="48" alt="" loading="lazy"></a>
     <b class="who"><a href="https://www.reddit.com/user/Muveeer/">u/Muveeer</a></b> Drew the <a href="https://www.reddit.com/r/switch2hacks/comments/1xhtmjt/two_sides/">"Two sides"</a> picture of gezine.</li>
   <li><a href="https://hackerone.com/hacktivity"><img class="avatar" src="images/credits/hackerone.jpg" width="48" height="48" alt="" loading="lazy"></a>
@@ -166,7 +179,9 @@
   <p class="footer-links"><a href="privacy">Privacy</a> &middot; <a href="terms">Terms &amp; takedowns</a> &middot; <a href="https://github.com/calamityCocoa/gezinegoodboy">Source code</a></p>
   <p>Not affiliated with Nintendo, HackerOne or gezine. All trademarks belong to their owners.</p>
   <p>This whole website is satire. It's all a big joke, so don't take offence, everything is over-exaggerated on purpose.</p>
-  <p>This website is under construction forever. You are visitor number 000069420.</p>
+  <p>This website is under construction forever. You are visitor number 000069420. <button type="button" class="egg-hidden modern-only" id="footer-egg" aria-label="An egg">🥚</button></p>
+  <p id="egg-count" class="modern-only"></p>
+  <p>Made with ♡ (and zero bags of eggs)</p>
 </footer>
 
 <button id="mini-player" class="mini modern-only" type="button" aria-label="Play the ASMR" hidden><img src="images/record.png" alt=""><i class="icon-play"></i><span class="label">ASMR</span></button>
@@ -174,6 +189,11 @@
 <script type="module" src="game.js"></script>
 <script type="module" src="arcade.js"></script>
 <script type="module" src="peek.js"></script>
+<script type="module" src="events.js"></script>
+<script type="module" src="eggs.js"></script>
+<script type="module" src="games/blitz.js"></script>
+<script type="module" src="games/empires.js"></script>
+<script type="module" src="games/lullaby.js"></script>
 <script type="module" src="app.js"></script>
 <script nomodule src="legacy.js"></script>
 </body>

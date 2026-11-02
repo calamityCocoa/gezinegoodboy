@@ -13,13 +13,17 @@ Is gezine being a good boy? A satire site: https://gezinegoodboy.vercel.app
   Whack-a-John, Pose Match and Combo Says. The lines that bury her when you lose are pepsipu's real
   [bootstrap.bas](https://gitlab.com/pepsipu/ns2jb/-/blob/main/bootstrap.bas), fetched live from GitLab (not copied here).
 - `api/gezine.js`: HackerOne lookup
+- `games/*.js`: plug-in arcade games (Better Gaming Blitz, Exploit Empires, Lua Lullaby...), written to the spec in
+  `docs/GAME-PLUGIN.md`; mostly written by Codex and reviewed/integrated here.
+- `events.js`: live events (UTC schedule), the weekly tournament and the community headpat goal.
+- `eggs.js`: Easter eggs. No spoilers.
 - `peek.js`: peekaboo. gezine, John Nintendo and pepsipu peek out from behind cards now and then
   (sprites in `images/peek/`, drawn with ChatGPT image generation). `GezPeek.now()` triggers one.
 - `api/_lib.js`: shared database access and rate limiting (hashed IPs, standard RateLimit headers)
 - `api/counts.js`: global headpat / respects counters
 - `api/scores.js`: global leaderboards for every arcade game
 
-## Database (counters and leaderboard)
+## Database (counters, leaderboards, player names)
 
 `api/counts.js` and `api/scores.js` use the Upstash Redis database `webhook-kv` (shared with other projects, so every key starts with `gez:`).
 Vercel dashboard → this project → Storage → Create Database → Upstash for Redis (free plan) → Connect.
@@ -31,6 +35,11 @@ hidden and the leaderboard says it's offline (the game itself still works).
 The ASMR videos are on the [`asmr` release](https://github.com/calamityCocoa/gezinegoodboy/releases/tag/asmr), and a 720p
 copy is served from [gezinegoodboy-media](https://github.com/calamityCocoa/gezinegoodboy-media) (GitHub Pages) for the
 Discord embed and the background player.
+
+## Costs
+
+Vercel Hobby and Upstash Free: neither can bill. Reads are cached at Vercel's edge (10-15s) so the shared free
+database quota lasts; if the site gets busy, give it its own free Upstash database so the other projects aren't affected.
 
 ## Legal and security
 

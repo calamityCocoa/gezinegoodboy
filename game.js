@@ -89,7 +89,7 @@
   // ---------------------------------------------------------------- leaderboard
   const board = {
     async top() {
-      const r = await fetch(API, { cache: "no-store" });
+      const r = await fetch(API);
       const b = await r.json().catch(() => ({}));
       if (!r.ok || !Array.isArray(b.top)) throw new Error(b.error || "offline");
       return b.top;
@@ -103,7 +103,7 @@
     async submit(run, name, score) {
       const r = await fetch(API, {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ run, name, score, device: DEV.id }),
+        body: JSON.stringify({ run, name, score, device: DEV.id, token: window.GezPlayer ? window.GezPlayer.token() : "" }),
       });
       const b = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(b.error || "Couldn't reach the leaderboard");

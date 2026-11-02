@@ -8,19 +8,20 @@ import { dbReady, redis, reply, rateLimit, tooMany, methodNotAllowed } from "./_
 const KEYS = { headpat: "gez:count:headpats", respect: "gez:count:respects" };
 const MAX_PER_REQUEST = 25;
 const CLICKS_PER_MINUTE = 400; // per visitor; a human mashing the button stays well under this
-const READS_PER_MINUTE = 120;
+// Reads are cached at Vercel's edge for a few seconds, so however many people are watching the
+// counters, the database is only asked every few seconds. That keeps us inside Upstash's free plan
+// (the database is shared with other projects, so it matters).
+const READ_CACHE = { "cache-control": "public, max-age=0, s-maxage=10, stale-while-revalidate=20" };
 
 async function totals() {
   const [[headpats, respects]] = await redis([["MGET", KEYS.headpat, KEYS.respect]]);
   return { headpats: Number(headpats) || 0, respects: Number(respects) || 0 };
 }
 
-export async function GET(request) {
+export async function GET() {
   if (!dbReady()) return reply({ error: "Counter database not connected" }, 503);
   try {
-    const rl = await rateLimit(request, "counts-read", READS_PER_MINUTE, 60);
-    if (!rl.ok) return tooMany(rl);
-    return reply(await totals(), 200, rl.headers);
+    return reply(await totals(), 200, READ_CACHE);
   } catch (e) {
     return reply({ error: "The counters are having a moment" }, 502);
   }

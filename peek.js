@@ -42,11 +42,14 @@
   const ready = [];
   PEEKERS.forEach((p) => { const im = new Image(); im.onload = () => { p.ratio = im.naturalHeight / im.naturalWidth; ready.push(p); }; im.src = p.src; });
 
-  function choose() {
-    const total = ready.reduce((n, p) => n + p.weight, 0);
+  function choose(want) {
+    if (want) { const w = ready.filter((p) => p.id === want)[0]; if (w) return w; }
+    // Midnight Debugging (events.js): John is asleep
+    const pool = window.GEZ_EVENTS && window.GEZ_EVENTS.isOn("midnight") ? ready.filter((p) => p.id !== "john") : ready;
+    const total = pool.reduce((n, p) => n + p.weight, 0);
     let r = Math.random() * total;
-    for (const p of ready) { if ((r -= p.weight) <= 0) return p; }
-    return ready[0];
+    for (const p of pool) { if ((r -= p.weight) <= 0) return p; }
+    return pool[0];
   }
 
   function gameOpen() {
@@ -58,7 +61,7 @@
   let busy = false, hideCurrent = null;
   // duck straight away if a game opens while someone's peeking
   setInterval(() => { if (hideCurrent && gameOpen()) hideCurrent(); }, 300);
-  function peek() {
+  function peek(want) {
     if (busy || !ready.length || document.hidden || gameOpen()) return;
     const vw = window.innerWidth, vh = window.innerHeight;
     // only things that are on screen, big enough, and not under the sticky top bar
@@ -69,7 +72,7 @@
       return r.width > 90 && r.height > 50 && r.top > top + 70 && r.top < vh - 30 && r.left >= 0 && r.right <= vw && el.offsetParent;
     });
     if (!els.length) return;
-    const el = pick(els), r = el.getBoundingClientRect(), who = choose();
+    const el = pick(els), r = el.getBoundingClientRect(), who = choose(want);
     const w = Math.round(Math.min(84, Math.max(56, r.width * 0.16)));
     const h = Math.round(w * (who.ratio || 0.8));
     const sx = window.pageXOffset, sy = window.pageYOffset;
@@ -142,5 +145,5 @@
   }
   schedule(true);
 
-  window.GezPeek = { now: peek }; // handy for testing: GezPeek.now()
+  window.GezPeek = { now: peek }; // GezPeek.now() or GezPeek.now("pepsipu") (used by events.js and eggs.js)
 })();

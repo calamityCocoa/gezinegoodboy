@@ -286,3 +286,73 @@ footer p { margin: 4px 0; }
 .legacy .modern-only { display: none !important; }
 .legacy #gezine-img { animation: none !important; }
 .legacy .topbar { position: static; }
+
+/* =====================================================================
+   kawaii pass: pastel polka dots, puffy buttons, sparkles and cat ears
+   ===================================================================== */
+:root { --bg: #fdf2f8; --line: #f6d5e6; }
+html, body { background-color: #fdf2f8; }
+body {
+  background-image: radial-gradient(#f9d3e6 1.6px, transparent 1.8px), radial-gradient(#d9e8ff 1.6px, transparent 1.8px);
+  background-size: 30px 30px; background-position: 0 0, 15px 15px;
+}
+::selection { background: #f9c5dc; color: #141a2b; }
+.topbar { background: rgba(255, 246, 251, .93); border-bottom: 2px solid #f9d3e6; }
+.brand span::after { content: " ♡"; color: #f06292; }
+.nav a:hover { background: #fde7ef; }
+.ticker { background: linear-gradient(90deg, #f06292, #b58cf2, #7fb8f0); }
+.card { border: 2px solid #fbe1ee; border-radius: 26px; box-shadow: 0 3px 0 rgba(240, 98, 146, .12), 0 14px 34px rgba(181, 140, 242, .12); }
+h2::after { content: " ✦"; color: #f06292; font-size: .62em; vertical-align: .35em; }
+h3::after { content: " ♡"; color: #f9a8c9; font-size: .8em; }
+.footer-links a::after, .credits h3::after { content: none; }
+.btn { box-shadow: 0 3px 0 #141a2b; transition: transform .1s, box-shadow .1s, background .15s; }
+.btn:hover { transform: translateY(-1px); box-shadow: 0 4px 0 #141a2b; }
+.btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #141a2b; }
+.btn-main { background: #f06292; border-color: #141a2b; }
+.btn-main:hover { background: #ec407a; }
+.btn-game { background: #e8dcff; border-color: #141a2b; }
+.stat { background: #fde7ef; border-radius: 18px; }
+.stat:nth-child(2) { background: #e6f1fd; }
+.stat:nth-child(3) { background: #efe6ff; }
+/* cat ears on gezine's picture box */
+.hero-art { position: relative; }
+.hero-art::before, .hero-art::after { content: ""; position: absolute; top: -16px; width: 38px; height: 30px; background: #141a2b;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%); z-index: 1; }
+.hero-art::before { left: calc(50% - 150px); transform: rotate(-14deg); }
+.hero-art::after { right: calc(50% - 150px); transform: rotate(14deg); }
+@media (max-width: 420px) { .hero-art::before { left: 18%; } .hero-art::after { right: 18%; } }
+#stage { border-radius: 22px; border-color: #141a2b; }
+.bubble { border-radius: 20px; }
+.player { background: linear-gradient(135deg, #141a2b, #2a2350); }
+.game-card { background: #fff; border: 2px solid #fbe1ee; border-radius: 22px; }
+.game-art { background: linear-gradient(135deg, #fde7ef, #e6f1fd); }
+.credits li { background: #fff7fb; border: 2px solid #fbe1ee; border-radius: 20px; }
+footer { color: #8a6d80; }
+
+/* ---------- live events ---------- */
+.ev-grid > div { margin-bottom: 16px; }
+@media (min-width: 900px) { .ev-grid { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 18px; } .ev-grid > div { margin: 0; } }
+.ev-now { background: #fde7ef; border-radius: 18px; padding: 12px 14px; margin-bottom: 8px; }
+.ev-now.quiet { background: #f4f2fb; }
+.ev-now b { font-family: "Fredoka", sans-serif; font-size: 1.1em; }
+.ev-now p { margin: 4px 0 0; font-size: .92em; }
+.ev-pill { display: inline-block; background: #e53935; color: #fff; font-size: .7em; font-weight: 800; padding: 2px 8px; border-radius: 999px; margin-right: 8px; vertical-align: 2px; animation: ev-blink 1.6s ease-in-out infinite; }
+@keyframes ev-blink { 50% { opacity: .55; } }
+.ev-left { float: right; font-size: .82em; color: #8a6d80; }
+.ev-next { font-size: .9em; color: #5b6275; margin: 6px 2px 0; }
+#events h3 { margin-top: 0; }
+.ev-top { margin: 6px 0 10px; padding-left: 22px; font-size: .92em; }
+.ev-bar { height: 16px; border-radius: 999px; background: #f4f2fb; border: 2px solid #fbe1ee; overflow: hidden; margin: 8px 0; }
+.ev-bar span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #f06292, #b58cf2); }
+#fw-banner { position: fixed; left: 12px; right: 12px; top: calc(62px + env(safe-area-inset-top)); z-index: 40; max-width: 720px; margin: 0 auto;
+  background: #fff; border: 3px solid #141a2b; border-radius: 18px; padding: 12px 14px; box-shadow: 0 10px 30px rgba(20,26,43,.2); }
+#fw-banner b { display: block; font-family: "Fredoka", sans-serif; font-size: 1.1em; }
+#fw-banner span { display: block; font-size: .9em; margin: 4px 0 8px; }
+/* Headpat Happy Hour: gezine sparkles */
+.ev-happyhour #stage { box-shadow: 0 0 0 4px #fde7ef, 0 0 30px rgba(240, 98, 146, .5); }
+.ev-happyhour #mood-btn { animation: ev-blink 1.2s ease-in-out infinite; }
+.player-box { margin-top: 14px; background: #fff7fb; border: 2px solid #fbe1ee; border-radius: 18px; padding: 10px 14px; }
+.player-box summary { cursor: pointer; font-weight: 800; }
+.pc-msg { min-height: 1.2em; font-size: .9em; color: #2e7d32; }
+@media (prefers-reduced-motion: reduce) { .ev-pill, .ev-happyhour #mood-btn { animation: none; } }
+.legacy .hero-art::before, .legacy .hero-art::after { display: none; }

@@ -19,7 +19,7 @@
 <main>
 <article class="card legal">
 <h1 class="eyebrow">Privacy</h1>
-<p><small>Last updated 2 November 2026</small></p>
+<p><small>Last updated 2 November 2026 (player codes, weekly tournament)</small></p>
 
 <p>The short version: this is a joke website. There are <b>no cookies, no analytics, no ads and no trackers</b>.
 The only personal data it keeps is a name you choose to put on a leaderboard. Everything else is either
@@ -35,7 +35,8 @@ If what you want to say is private, say so in the issue (without the details) an
 <div class="table-scroll"><table>
   <thead><tr><th>What</th><th>Why</th><th>How long</th></tr></thead>
   <tbody>
-    <tr><td>The name, score and device type (like "Switch 2") you submit to a leaderboard</td><td>To show the leaderboard. Only sent if you press "Submit score".</td><td>Until you ask us to remove it</td></tr>
+    <tr><td>The name, score and device type (like "Switch 2") you submit to a leaderboard</td><td>To show the leaderboards, including the weekly tournament. Only sent if you press "Submit score".</td><td>Main boards: until you ask us to remove it. Weekly boards: 30 days</td></tr>
+    <tr><td>For each leaderboard name: a scrambled (hashed) copy of your player code, the date you first used the name, and your device type</td><td>So nobody else can post scores under a name you've claimed. Your actual player code stays on your device; we can't see it or recover it.</td><td>Until you ask us to remove it</td></tr>
     <tr><td>Global headpat and respects counts (just numbers, nothing about who clicked)</td><td>The "everyone so far" counters</td><td>Indefinitely</td></tr>
     <tr><td>A one-off game id and the time a game started</td><td>To check a submitted score was possible in the time played</td><td>2 hours, or until the score is submitted</td></tr>
     <tr><td>A scrambled (salted, hashed) version of your IP address, never the address itself</td><td>Rate limiting, so nobody can spam the counters or leaderboards. The scrambling changes every day, so it can't be used to follow you over time.</td><td>1 minute to 1 hour</td></tr>
@@ -47,9 +48,11 @@ keeping the site working are based on our legitimate interest in running a site 
 
 <h2>What stays on your device</h2>
 <p>The site saves a few things in your browser's local storage so they're still there next time: uwu mode, whether the
-ASMR starts by itself and where you got up to in it, your best scores, your Headpat Clicker progress, and the last
-name you used on a leaderboard. These never leave your device unless you submit a score. Clear your browser's site
+ASMR starts by itself and where you got up to in it, your best scores, your game settings, your Headpat Clicker progress,
+which Easter eggs you've found, the last name you used on a leaderboard, and your player code (a random secret that
+proves a leaderboard name is yours). These never leave your device unless you submit a score. Clear your browser's site
 data to remove them. None of this is a cookie and none of it is used to track you.</p>
+<p>Live events are worked out from the clock in your browser; nothing is collected for them.</p>
 <p>Working out which device you're on (for the greeting at the top) happens entirely in your browser and isn't sent
 anywhere, except the device type you choose to attach when submitting a score.</p>
 
@@ -63,8 +66,9 @@ anywhere, except the device type you choose to attach when submitting a score.</
   <li><b>GitHub</b>: the ASMR audio and the video downloads are served from GitHub Pages and GitHub Releases, so
     GitHub sees your IP address when your browser fetches them (only when the audio plays or you download something). See
     <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub's privacy statement</a>.</li>
-  <li><b>GitLab</b>: DMCA Dodge and Bootstrap Typer load pepsipu's bootstrap.bas straight from GitLab, so GitLab
-    sees your IP address when you play them. See <a href="https://about.gitlab.com/privacy/">GitLab's privacy statement</a>.</li>
+  <li><b>GitLab and GitHub</b>: DMCA Dodge and Bootstrap Typer load the bootstrap.bas straight from the repositories it
+    lives in (pepsipu's and other people's on GitLab, and forks on GitHub), so those sites see your IP address when you
+    play them. See <a href="https://about.gitlab.com/privacy/">GitLab's privacy statement</a> and GitHub's above.</li>
   <li><b>HackerOne</b>: our server reads gezine's public hacktivity from HackerOne. Nothing about you is sent.</li>
   <li>Links to YouTube, Reddit and other sites only contact them if you click them.</li>
 </ul>

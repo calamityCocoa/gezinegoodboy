@@ -20,6 +20,19 @@
   const short = (n) => n >= 1e9 ? (n / 1e9).toFixed(1) + "B" : n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e4 ? (n / 1e3).toFixed(1) + "K" : Math.floor(n).toLocaleString();
   const touchy = () => matchMedia("(pointer: coarse)").matches;
 
+  // Bootstrap Typer can use different versions of the bootstrap.bas, loaded live from each repo
+  const VERSIONS = [
+    { id: "pepsipu", label: "pepsipu (original)", repo: "https://gitlab.com/pepsipu/ns2jb",
+      url: "https://gitlab.com/api/v4/projects/pepsipu%2Fns2jb/repository/files/bootstrap.bas/raw?ref=main" },
+    { id: "kurumuz", label: "kurumuz fork", repo: "https://gitlab.com/kurumuz/ns2jb",
+      url: "https://gitlab.com/api/v4/projects/kurumuz%2Fns2jb/repository/files/bootstrap.bas/raw?ref=main" },
+    { id: "mhzsajan", label: "mhzsajan rework", repo: "https://github.com/mhzsajan/ns2jb",
+      url: "https://raw.githubusercontent.com/mhzsajan/ns2jb/HEAD/bootstrap.bas" },
+    { id: "pico", label: "Pico edition (MikeM64)", repo: "https://github.com/MikeM64/pico-ns2jb-bootstrap",
+      url: "https://raw.githubusercontent.com/MikeM64/pico-ns2jb-bootstrap/HEAD/src/bootstrap.bas" },
+  ];
+  const versionById = (id) => VERSIONS.filter((v) => v.id === id)[0] || VERSIONS[0];
+
   // ---------------------------------------------------------------- the games
   const GAMES = [
     { id: "dodge", title: "DMCA Dodge", art: "images/headset/run0.png", board: true, unit: "points",
@@ -27,7 +40,12 @@
     { id: "clicker", title: "Headpat Clicker", art: "images/pat/2.png", board: false, unit: "headpats",
       blurb: "Pat gezine, buy upgrades, pat harder. Every pat you give by hand counts towards everyone's headpats." },
     { id: "typer", title: "Bootstrap Typer", art: "images/peek/pepsipu.png", board: true, unit: "characters",
-      blurb: "Type pepsipu's real bootstrap.bas as fast as you can. 60 seconds on the clock." },
+      blurb: "Type the real ns2jb bootstrap.bas as fast as you can, in a SmileBASIC 4 style editor. Pick a version and a mode.",
+      options: [
+        { id: "version", label: "Version", choices: VERSIONS.map((v) => ({ id: v.id, label: v.label })) },
+        { id: "mode", label: "Mode", choices: [{ id: "classic", label: "Classic 60s" }, { id: "sprint", label: "Sprint 30s" }, { id: "marathon", label: "Marathon 2min" }] },
+      ],
+      ranked: (o) => o.mode === "classic", rankedNote: "Classic (60s)" },
     { id: "whack", title: "Whack-a-John", art: "images/arcade/john-head.png", board: true, unit: "bonks",
       blurb: "John Nintendo keeps popping out of gezine's hut. Bonk him. Do not bonk gezine." },
     { id: "match", title: "Pose Match", art: "images/headset/wave2.png", board: true, unit: "points",
@@ -38,16 +56,39 @@
   const byId = {};
   GAMES.forEach((g) => { byId[g.id] = g; });
 
+  // ---------------------------------------------------------------- your player code
+  // A random secret made on this device the first time it's needed. The server only keeps a hash
+  // of it, and uses it so nobody else can post scores under a name you've claimed.
+  const player = {
+    token() {
+      let t = store.get("player-token");
+      if (!t || !/^[A-Za-z0-9_-]{20,64}$/.test(t)) {
+        const bytes = new Uint8Array(24);
+        (window.crypto || window.msCrypto).getRandomValues(bytes);
+        t = btoa(String.fromCharCode.apply(null, bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+        store.set("player-token", t);
+      }
+      return t;
+    },
+    use(code) {
+      code = String(code || "").trim();
+      if (!/^[A-Za-z0-9_-]{20,64}$/.test(code)) return false;
+      store.set("player-token", code);
+      return true;
+    },
+  };
+  window.GezPlayer = player;
+
   // ---------------------------------------------------------------- leaderboards
   const board = {
     async top(game) {
-      const r = await fetch(API + "?game=" + game, { cache: "no-store" });
+      const r = await fetch(API + "?game=" + game);
       const b = await r.json().catch(() => ({}));
       if (!r.ok || !Array.isArray(b.top)) throw new Error(b.error || "offline");
       return b.top;
     },
     async all() {
-      const r = await fetch(API + "?all=1", { cache: "no-store" });
+      const r = await fetch(API + "?all=1");
       const b = await r.json().catch(() => ({}));
       if (!r.ok || !b.games) throw new Error(b.error || "offline");
       return b.games;
@@ -61,7 +102,7 @@
     async submit(run, name, score) {
       const r = await fetch(API, {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ run, name, score, device: DEV.id }),
+        body: JSON.stringify({ run, name, score, device: DEV.id, token: player.token() }),
       });
       const b = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(b.error || "Couldn't reach the leaderboard");
@@ -87,24 +128,24 @@
   }
 
   // the bootstrap.bas, for Bootstrap Typer (same file DMCA Dodge uses)
-  const CODE_URL = "https://gitlab.com/api/v4/projects/pepsipu%2Fns2jb/repository/files/bootstrap.bas/raw?ref=main";
   const PRACTICE = ['PRINT "GOOD BOY"', "VAR HEADPATS=0", "FOR I=1 TO 30:NEXT", 'IF DMCA THEN PRINT "RUN"', "VSYNC 1", "WAIT 60"];
-  let codeLines = null;
+  const codeCache = {};
   // every line of the file with its real line number; "typeable" ones are the ones you type
   const toLines = (arr) => arr.map((raw, i) => {
     const text = raw.replace(/\s+$/, "").replace(/^\s+/, "");
     const indent = raw.length - raw.replace(/^\s+/, "").length;
     return { n: i + 1, indent: Math.min(indent, 8), text, typeable: text.length >= 2 && text.length <= 52 && text[0] !== "'" && !/^REM\b/i.test(text) };
   });
-  function loadCode() {
-    if (!codeLines) codeLines = fetch(CODE_URL)
+  function loadCode(versionId) {
+    const v = versionById(versionId);
+    if (!codeCache[v.id]) codeCache[v.id] = fetch(v.url)
       .then((r) => (r.ok ? r.text() : Promise.reject(new Error(r.status))))
       .then((t) => {
         const lines = toLines(t.replace(/\t/g, " ").split(/\r?\n/));
         return lines.filter((l) => l.typeable).length > 20 ? { lines, real: true } : { lines: toLines(PRACTICE), real: false };
       })
       .catch(() => ({ lines: toLines(PRACTICE), real: false }));
-    return codeLines;
+    return codeCache[v.id];
   }
 
   // SmileBASIC syntax colours (in the spirit of the SmileBASIC 4 editor)
@@ -185,6 +226,9 @@
   .ar-panel input { font: inherit; font-size: 16px; width: 100%; box-sizing: border-box; min-height: 44px; padding: 8px 12px;
                     border: 2px solid #141a2b; border-radius: 12px; margin-top: 4px; }
   .ar-msg { min-height: 1.4em; font-size: .9em; }
+  .ar-opt { margin: 10px 0 0; } .ar-opt span { display: block; font-size: .8em; font-weight: 800; color: #5b6275; margin-bottom: 4px; }
+  .ar-chip { font: inherit; font-size: .85em; font-weight: 700; padding: 5px 11px; margin: 0 4px 6px 0; border-radius: 999px; border: 2px solid #d9dcea; background: #fff; color: #141a2b; cursor: pointer; }
+  .ar-chip.on { border-color: #f06292; background: #fde7ef; }
   .ar-msg.err { color: #c62828; }
   .hh-board { width: 100%; border-collapse: collapse; margin: 8px 0 4px; font-size: .92em; }
   .hh-board th, .hh-board td { border-bottom: 1px solid #d9dcea; padding: 4px 8px; text-align: left; }
@@ -364,10 +408,29 @@
       '<img class="art" src="' + g.art + '" alt="">' +
       "<h2>" + esc(g.title) + "</h2><p>" + esc(g.blurb) + "</p><p><small>" + esc(controls(g)) + "</small></p>" +
       (best ? "<p>Your best: <b>" + best.toLocaleString() + "</b></p>" : "") +
+      optionsHTML(g) +
       (g.board ? '<div class="ar-top"><p><small>Loading the leaderboard...</small></p></div>' : ""),
       [["Play", start, true], ["Copy link", (e) => copyLink(g.id, e.target), false], ["Back to the arcade", close]]);
     if (g.board) renderBoard(panel.querySelector(".ar-top"), g.id, 5, store.get("headset-name"));
   }
+
+  // games can offer choices on their title screen: options: [{ id, label, choices: [{ id, label }] }]
+  const chosen = (g, o) => {
+    const saved = store.get(g.id + "-opt-" + o.id);
+    return o.choices.some((c) => c.id === saved) ? saved : o.choices[0].id;
+  };
+  function optionsHTML(g) {
+    if (!g.options) return "";
+    return g.options.map((o) => '<div class="ar-opt"><span>' + esc(o.label) + "</span>" + o.choices.map((c) =>
+      '<button type="button" class="ar-chip' + (chosen(g, o) === c.id ? " on" : "") + '" data-opt="' + o.id + '" data-val="' + c.id + '">' + esc(c.label) + "</button>").join("") +
+      "</div>").join("");
+  }
+  addEventListener("click", (e) => {
+    const b = e.target && e.target.closest ? e.target.closest(".ar-chip") : null;
+    if (!b || !current) return;
+    store.set(current.id + "-opt-" + b.getAttribute("data-opt"), b.getAttribute("data-val"));
+    [].forEach.call(panel.querySelectorAll('.ar-chip[data-opt="' + b.getAttribute("data-opt") + '"]'), (x) => x.classList.toggle("on", x === b));
+  });
 
   function start() {
     stopGame();
@@ -376,7 +439,10 @@
     scoreEl.textContent = ""; statusEl.textContent = "";
     playing = true;
     runId = null;
-    if (current.board) {
+    api.options = {};
+    (current.options || []).forEach((o) => { api.options[o.id] = chosen(current, o); });
+    api.ranked = true;
+    if (current.board && (!current.ranked || current.ranked(api.options))) {
       const p = (runPromise = board.start(current.id));
       p.then((id) => { if (runPromise === p) runId = id; });
     }
@@ -395,7 +461,8 @@
     if (runPromise) await Promise.race([runPromise, new Promise((ok) => setTimeout(ok, 1500))]);
     const run = runId;
     runId = null;
-    const canSubmit = g.board && score > 0 && run;
+    const ranked = !g.ranked || g.ranked(api.options || {});
+    const canSubmit = g.board && ranked && score > 0 && run;
     const name = store.get("headset-name") || "";
     showPanel(
       "<h2>" + esc(headline || "Game over") + "</h2>" +
@@ -405,6 +472,7 @@
         ? '<form class="ar-form" novalidate><label>Your name for the leaderboard' +
           '<input name="name" maxlength="16" autocomplete="nickname" autocapitalize="off" spellcheck="false" enterkeyhint="send" value="' + esc(name) + '"></label>' +
           '<button class="ar-btn main" type="submit">Submit score</button></form><p class="ar-msg"></p>'
+        : g.board && !ranked ? "<p><small>Only " + esc(g.rankedNote || "the main mode") + " counts for the leaderboard.</small></p>"
         : g.board && score > 0 ? "<p><small>The leaderboard is offline right now, so this score is only saved on this device.</small></p>" : "") +
       (g.board ? '<div class="ar-top"></div>' : ""),
       [["Play again", start, !canSubmit], ["Back to the arcade", close]],
@@ -421,7 +489,8 @@
         const res = await board.submit(run, typed, score);
         store.set("headset-name", res.name || typed);
         form.parentNode.removeChild(form);
-        msg.textContent = res.rank ? "You're #" + res.rank + " on the leaderboard" + (res.best > score ? " (your best is " + res.best.toLocaleString() + ")" : "") + "!" : "Score sent!";
+        msg.textContent = (res.rank ? "You're #" + res.rank + " on the leaderboard" + (res.best > score ? " (your best is " + res.best.toLocaleString() + ")" : "") + "!" : "Score sent!") +
+          (res.week && res.week.rank ? " And #" + res.week.rank + " in this week's event!" : "");
         panel.querySelector(".ar-top").innerHTML = boardHTML(res.top || [], 10, res.name || typed);
       } catch (err) {
         btn.disabled = false;
@@ -549,8 +618,9 @@
 
   // ================================================================ Bootstrap Typer
   IMPL.typer = (a) => {
-    const SECONDS = 60, BEFORE = 3, AFTER = 6;
-    a.stage.innerHTML = '<div class="ty"><div class="sb"><div class="sb-tabs"><span class="sb-tab on">SLOT 0: BOOTSTRAP.BAS</span><span class="sb-tab">DIRECT</span></div>' +
+    const opts = a.options || {}, version = versionById(opts.version);
+    const SECONDS = opts.mode === "sprint" ? 30 : opts.mode === "marathon" ? 120 : 60, BEFORE = 3, AFTER = 6;
+    a.stage.innerHTML = '<div class="ty"><div class="sb"><div class="sb-tabs"><span class="sb-tab on">SLOT 0: BOOTSTRAP.BAS</span><span class="sb-tab">' + esc(version.label.toUpperCase()) + '</span></div>' +
       '<div class="sb-body" aria-live="polite"><div class="sb-row cur"><span class="ln"></span><span class="code">LOADING...</span></div></div>' +
       '<div class="sb-status"><span class="pos"></span><span class="clock">60s</span></div></div>' +
       '<label class="ty-cmd"><span>&gt;</span><input type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Type the highlighted line here"></label>' +
@@ -561,9 +631,10 @@
     input.onpaste = (e) => e.preventDefault();
     let lines = toLines(PRACTICE), cur = 0, best = 0, score = 0, typedOk = 0, left = SECONDS, started = false, ready = false;
 
-    loadCode().then((c) => {
+    clock.textContent = SECONDS + "s";
+    loadCode(version.id).then((c) => {
       lines = c.lines;
-      src.textContent = c.real ? "Lines from pepsipu's bootstrap.bas (ns2jb). Capitals don't matter." : "Practice lines (couldn't reach GitLab).";
+      src.innerHTML = c.real ? "Lines from the " + esc(version.label) + ' bootstrap.bas (<a href="' + version.repo + '" target="_blank" rel="noopener">source</a>). Capitals don\'t matter.' : "Practice lines (couldn't reach that repo).";
       // start somewhere random, on a line you can type
       const starts = lines.map((l, i) => (l.typeable ? i : -1)).filter((i) => i >= 0);
       cur = starts[Math.floor(Math.random() * starts.length)];
@@ -850,12 +921,31 @@
     renderMenu();
     renderTabs();
     refreshPage();
+    const box = document.getElementById("player-box");
+    if (box) {
+      const name = store.get("headset-name");
+      box.innerHTML = "<summary>Your player code" + (name ? " (" + esc(name) + ")" : "") + "</summary>" +
+        "<p><small>The first time you put a name on a leaderboard, it's saved to this code, so nobody else can use your name. " +
+        "To use your name on another device, copy the code there. Keep it secret, like a password.</small></p>" +
+        '<p><button type="button" class="btn" data-pc="copy">Copy my code</button> <button type="button" class="btn" data-pc="use">Use a code from another device</button></p><p class="pc-msg"></p>';
+      const msg = box.querySelector(".pc-msg");
+      box.querySelector('[data-pc="copy"]').onclick = () => {
+        const code = player.token();
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(() => { msg.textContent = "Copied. Paste it on your other device."; }, () => window.prompt("Your player code:", code));
+        else window.prompt("Your player code:", code);
+      };
+      box.querySelector('[data-pc="use"]').onclick = () => {
+        const code = window.prompt("Paste your player code:");
+        if (code === null) return;
+        msg.textContent = player.use(code) ? "Done! Scores from this device now count for your name." : "That doesn't look like a player code.";
+      };
+    }
     window.onHeadsetHeroClose = () => { setPlayParam(null); refreshPage(); }; // DMCA Dodge (game.js) calls this when it closes
     [].forEach.call(document.querySelectorAll("[data-open-game]"), (b) => { b.onclick = () => open(b.getAttribute("data-open-game")); });
     // a direct link: open that game's start screen straight away
     let want = null;
     try { want = new URLSearchParams(location.search).get("play"); } catch (e) {}
-    if (want && byId[want]) setTimeout(() => open(want), 0);
+    if (want && /^[a-z]{2,20}$/.test(want)) setTimeout(() => open(want), 0); // plug-in games may register a moment later
   }
 
   // ---------------------------------------------------------------- plug-in games
