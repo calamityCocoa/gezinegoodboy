@@ -1,6 +1,9 @@
 // Vercel function: GET /api/gezine
 // Returns gezine's HackerOne hacktivity as JSON, with a check for reports to Nintendo.
 // Vercel's CDN caches it for 10 minutes so HackerOne isn't hammered.
+// Requests that get past the cache are also rate limited per visitor (see _lib.js).
+
+import { dbReady, rateLimit, reply } from "./_lib.js";
 
 const H1_GRAPHQL = "https://hackerone.com/graphql";
 const REPORTER = "gezine";
@@ -91,8 +94,12 @@ async function fetchActivity() {
   };
 }
 
-export async function GET() {
+export async function GET(request) {
   try {
+    if (dbReady()) {
+      const rl = await rateLimit(request, "gezine", 30, 60).catch(() => ({ ok: true }));
+      if (!rl.ok) return reply({ error: "Slow down a little and try again in a moment" }, 429, rl.headers);
+    }
     return Response.json(await fetchActivity(), {
       headers: { "cache-control": "public, s-maxage=600, stale-while-revalidate=600" },
     });

@@ -33,9 +33,7 @@
 <meta name="twitter:player:stream:content_type" content="video/mp4">
 <meta name="twitter:player:width" content="720">
 <meta name="twitter:player:height" content="720">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;700;800&display=swap">
+<link rel="preload" href="fonts/nunito.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -47,7 +45,7 @@
       <a href="#tracker">Tracker</a>
       <a href="#reports-card">Reports</a>
       <a href="#asmr">ASMR</a>
-      <a href="#dmca-dodge" class="modern-only">DMCA Dodge</a>
+      <a href="#arcade" class="modern-only">Arcade</a>
       <a href="#credits">Credits</a>
     </nav>
   </div>
@@ -78,7 +76,7 @@
     <div class="actions">
       <button id="mood-btn" class="btn btn-main" type="button">Give gezine headpats</button>
       <button id="eta-btn" class="btn" type="button">ETA WEN?</button>
-      <button class="btn btn-game modern-only" type="button" data-play-game>Play DMCA Dodge</button>
+      <a class="btn btn-game modern-only" href="#arcade">Play games</a>
     </div>
     <p class="action-out"><span id="mood-count"></span> <span id="eta"></span></p>
     <p id="global" class="global" hidden>Everyone so far: <b id="g-pats">0</b> headpats and <b id="g-fs">0</b> respects paid.</p>
@@ -129,19 +127,17 @@
   <p><small>Before anyone says it: yes, we know <a href="https://github.com/pepsipu"><b>pepsipu</b></a> made <a href="https://gitlab.com/pepsipu/ns2jb">ns2jb</a>, which is where this bootstrap.bas comes from. gezine didn't write it, he's just being a good boy and reading it out for us.</small></p>
 </section>
 
-<section class="card dodge modern-only" id="dmca-dodge">
-  <img class="dodge-art" src="images/headset/wave2.png" alt="" width="140">
-  <h2>DMCA Dodge</h2>
-  <p>gezine put her headset on. Catch the notes, SmileBASIC tokens and stars, and dodge John Nintendo's DMCA letters.
-  Get hit three times and John Nintendo himself shows up, and the real <a href="https://gitlab.com/pepsipu/ns2jb/-/blob/main/bootstrap.bas">bootstrap.bas</a> falls on her, line by line.</p>
-  <p><small>Keyboard, mouse, touch or controller. (Psst: 30 headpats also gets you in.)</small></p>
-  <p><button class="btn btn-main btn-big" type="button" data-play-game>&#9654; Play DMCA Dodge</button></p>
-  <h3>Leaderboard</h3>
+<section class="card modern-only" id="arcade">
+  <h2>gezine's Arcade</h2>
+  <p>Six little games starring gezine. Keyboard, mouse, touch or controller, on whatever you've got.</p>
+  <div class="arcade-grid" id="arcade-grid"></div>
+  <h3>Leaderboards</h3>
+  <div class="board-tabs" id="board-tabs" role="tablist" aria-label="Pick a game"></div>
   <div id="game-board"><p><small>Loading...</small></p></div>
 </section>
 <section class="card legacy-only">
-  <h2>DMCA Dodge</h2>
-  <p>gezine's game needs a newer browser than this one. Try it on a phone, a computer or a Switch.</p>
+  <h2>gezine's Arcade</h2>
+  <p>The games need a newer browser than this one. Try them on a phone, a computer or a Switch.</p>
 </section>
 
 <section class="card" id="credits">
@@ -167,7 +163,8 @@
 </main>
 
 <footer>
-  <p>Not affiliated with Nintendo, HackerOne or gezine.</p>
+  <p class="footer-links"><a href="privacy">Privacy</a> &middot; <a href="terms">Terms &amp; takedowns</a> &middot; <a href="https://github.com/calamityCocoa/gezinegoodboy">Source code</a></p>
+  <p>Not affiliated with Nintendo, HackerOne or gezine. All trademarks belong to their owners.</p>
   <p>This whole website is satire. It's all a big joke, so don't take offence, everything is over-exaggerated on purpose.</p>
   <p>This website is under construction forever. You are visitor number 000069420.</p>
 </footer>
@@ -175,6 +172,7 @@
 <button id="mini-player" class="mini modern-only" type="button" aria-label="Play the ASMR" hidden><img src="images/record.png" alt=""><i class="icon-play"></i><span class="label">ASMR</span></button>
 
 <script type="module" src="game.js"></script>
+<script type="module" src="arcade.js"></script>
 <script type="module" src="app.js"></script>
 <script nomodule src="legacy.js"></script>
 </body>

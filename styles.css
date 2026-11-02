@@ -2,6 +2,11 @@
  * Pastel colours from the ASMR art. Written so old browsers (Switch 1, Wii U, 3DS)
  * still get a tidy page: plain blocks first, then flex/grid layered on top. */
 
+/* fonts are served from this site (not Google), so visitors' IPs aren't sent to anyone else.
+   Fredoka and Nunito are under the SIL Open Font License, see fonts/OFL-*.txt */
+@font-face { font-family: "Fredoka"; src: url("fonts/fredoka.woff2") format("woff2"); font-weight: 300 700; font-display: swap; }
+@font-face { font-family: "Nunito"; src: url("fonts/nunito.woff2") format("woff2"); font-weight: 200 1000; font-display: swap; }
+
 :root {
   --ink: #141a2b;
   --muted: #5b6275;
@@ -177,6 +182,34 @@ tr.nintendo td { font-weight: 800; background: #fde7ef; }
 #game-board .hh-board td:nth-child(2) { overflow-wrap: anywhere; }
 #game-board tr.me td { background: #fde7ef; font-weight: 800; }
 .hh-dev { font-weight: 400; color: #8a90a2; white-space: nowrap; }
+
+/* ---------- arcade ---------- */
+.arcade-grid { margin: 14px 0 6px; }
+.game-card { display: inline-block; vertical-align: top; width: 100%; margin: 0 0 14px; border-radius: 16px; background: #f4f2fb; overflow: hidden; border: 1px solid #ebeaf3; }
+.game-art { height: 130px; background: #e6f1fd; text-align: center; padding: 10px; }
+.game-art img { height: 110px; width: auto; max-width: 100%; object-fit: contain; }
+.game-body { padding: 12px 14px 14px; }
+.game-body h3 { margin: 0 0 4px; font-size: 1.2em; }
+.game-body p { font-size: .9em; margin: 0 0 8px; }
+.game-meta { color: #5b6275; font-size: .82em !important; }
+.game-body .btn { margin: 4px 0 0; }
+.board-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+.tab { font: inherit; font-weight: 700; font-size: .88em; padding: 6px 12px; border-radius: 999px; border: 2px solid #d9dcea; background: #fff; color: #141a2b; cursor: pointer; min-height: 36px; }
+.tab.on { border-color: #141a2b; background: #141a2b; color: #fff; }
+@media (min-width: 620px) {
+  .arcade-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .game-card { margin: 0; }
+}
+@media (min-width: 960px) { .arcade-grid { grid-template-columns: repeat(3, 1fr); } }
+
+.footer-links { font-weight: 700; }
+.footer-links a { color: inherit; }
+
+/* ---------- legal pages ---------- */
+.legal { max-width: 760px; }
+.legal h2 { margin-top: 1.4em; font-size: 1.3em; }
+.legal li { margin: 4px 0; }
+.legal table td, .legal table th { font-size: .92em; }
 
 /* ---------- credits ---------- */
 .credits { list-style: none; margin: 0; padding: 0; }

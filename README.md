@@ -6,11 +6,14 @@ Is gezine being a good boy? A satire site: https://gezinegoodboy.vercel.app
   and gives each its own greeting and tweaks. Preview any of them with `?device=switch2`, `?device=3ds`, etc.
 - `app.js`: the main page code (modern browsers, including the Switch 1's)
 - `legacy.js`: a lighter "classic" page for old browsers (3DS, Wii U, Vita, Kindle). Preview it with `?classic=1`
-- `game.js`: DMCA Dodge, gezine's game (when she loses, John Nintendo turns up). The lines that bury her when you lose are pepsipu's real
+- `game.js`: DMCA Dodge (when she loses, John Nintendo turns up).
+- `arcade.js`: gezine's Arcade: the game menu, a shared game window, and Headpat Clicker, Bootstrap Typer,
+  Whack-a-John, Pose Match and Combo Says. The lines that bury her when you lose are pepsipu's real
   [bootstrap.bas](https://gitlab.com/pepsipu/ns2jb/-/blob/main/bootstrap.bas), fetched live from GitLab (not copied here).
 - `api/gezine.js`: HackerOne lookup
+- `api/_lib.js`: shared database access and rate limiting (hashed IPs, standard RateLimit headers)
 - `api/counts.js`: global headpat / respects counters
-- `api/scores.js`: DMCA Dodge global leaderboard
+- `api/scores.js`: global leaderboards for every arcade game
 
 ## Database (counters and leaderboard)
 
@@ -24,3 +27,10 @@ hidden and the leaderboard says it's offline (the game itself still works).
 The ASMR videos are on the [`asmr` release](https://github.com/calamityCocoa/gezinegoodboy/releases/tag/asmr), and a 720p
 copy is served from [gezinegoodboy-media](https://github.com/calamityCocoa/gezinegoodboy-media) (GitHub Pages) for the
 Discord embed and the background player.
+
+## Legal and security
+
+- `privacy.html` and `terms.html` (served at `/privacy` and `/terms`). Keep them in sync with what the code actually stores.
+- `vercel.json` sets a Content Security Policy and other security headers. If you add something loaded from another site, add it there too.
+- Fonts are self-hosted in `fonts/` (SIL Open Font License), so nothing is loaded from Google.
+- The MIT licence covers the code only, not the artwork, audio or other people's material.

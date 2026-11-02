@@ -71,31 +71,14 @@ const ETAS = [
 $("eta-btn").onclick = () => show("eta", ETAS[Math.floor(Math.random() * ETAS.length)]);
 
 let isBad = false, pats = 0, fs = 0;
-// DMCA Dodge (game.js): the play buttons, the leaderboard on the page,
-// and 30 headpats (or 30 respects) opens it as a surprise
-const GAME_AT = 30;
-let gameOpened = false;
-document.querySelectorAll("[data-play-game]").forEach((b) => { b.onclick = () => HeadsetHero.open(); });
-const refreshBoard = () => HeadsetHero.renderBoard($("game-board"), 10, (() => { try { return localStorage.getItem("headset-name"); } catch (e) { return null; } })());
-refreshBoard();
-window.onHeadsetHeroClose = refreshBoard;
-function maybeStartGame(n) {
-  if (n === GAME_AT - 10) HeadsetHero.preload(); // get the art ready early
-  if (n >= GAME_AT && !gameOpened) {
-    gameOpened = true;
-    setTimeout(() => HeadsetHero.open("pats"), 700); // let the last headpat finish first
-  }
-}
 $("mood-btn").onclick = () => {
   if (isBad) {
     show("mood-count", "F".repeat(Math.min(++fs, 40)) + " (" + fs + " respects paid to the exploits)");
     pending.respect++;
-    maybeStartGame(fs);
   } else {
-    show("mood-count", "headpats given: " + ++pats + (pats >= GAME_AT - 10 && pats < GAME_AT ? " (she's reaching for her headset...)" : ""));
+    show("mood-count", "headpats given: " + ++pats);
     pending.headpat++;
     headpat();
-    maybeStartGame(pats);
   }
   showGlobal();
 };

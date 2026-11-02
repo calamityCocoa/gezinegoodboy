@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Privacy - Gezine Good Boy Tracker</title>
+<meta name="description" content="What the Gezine Good Boy Tracker stores, why, and for how long.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="/"><img src="favicon.png" alt="" width="28" height="28"><span>gezine good boy</span></a>
+    <nav class="nav" aria-label="Pages"><a href="/">Home</a><a href="terms">Terms</a></nav>
+  </div>
+</header>
+<main>
+<article class="card legal">
+<h1 class="eyebrow">Privacy</h1>
+<p><small>Last updated 2 November 2026</small></p>
+
+<p>The short version: this is a joke website. There are <b>no cookies, no analytics, no ads and no trackers</b>.
+The only personal data it keeps is a name you choose to put on a leaderboard. Everything else is either
+kept on your own device or thrown away within an hour.</p>
+
+<h2>Who runs this site</h2>
+<p>The Gezine Good Boy Tracker is a hobby site made by <a href="https://github.com/calamityCocoa">calamityCocoa</a>.
+To get in touch about anything on this page, including any of the requests below, open an issue at
+<a href="https://github.com/calamityCocoa/gezinegoodboy/issues">github.com/calamityCocoa/gezinegoodboy/issues</a>.
+If what you want to say is private, say so in the issue (without the details) and we'll arrange another way to talk.</p>
+
+<h2>What we keep, why, and for how long</h2>
+<div class="table-scroll"><table>
+  <thead><tr><th>What</th><th>Why</th><th>How long</th></tr></thead>
+  <tbody>
+    <tr><td>The name, score and device type (like "Switch 2") you submit to a leaderboard</td><td>To show the leaderboard. Only sent if you press "Submit score".</td><td>Until you ask us to remove it</td></tr>
+    <tr><td>Global headpat and respects counts (just numbers, nothing about who clicked)</td><td>The "everyone so far" counters</td><td>Indefinitely</td></tr>
+    <tr><td>A one-off game id and the time a game started</td><td>To check a submitted score was possible in the time played</td><td>2 hours, or until the score is submitted</td></tr>
+    <tr><td>A scrambled (salted, hashed) version of your IP address, never the address itself</td><td>Rate limiting, so nobody can spam the counters or leaderboards. The scrambling changes every day, so it can't be used to follow you over time.</td><td>1 minute to 1 hour</td></tr>
+  </tbody>
+</table></div>
+<p>The legal bases (for people covered by the GDPR or UK GDPR): showing your leaderboard entry is based on your
+consent, which you give by submitting it and can take back at any time by asking us to remove it. Rate limiting and
+keeping the site working are based on our legitimate interest in running a site that can't be easily abused.</p>
+
+<h2>What stays on your device</h2>
+<p>The site saves a few things in your browser's local storage so they're still there next time: uwu mode, whether the
+ASMR starts by itself and where you got up to in it, your best scores, your Headpat Clicker progress, and the last
+name you used on a leaderboard. These never leave your device unless you submit a score. Clear your browser's site
+data to remove them. None of this is a cookie and none of it is used to track you.</p>
+<p>Working out which device you're on (for the greeting at the top) happens entirely in your browser and isn't sent
+anywhere, except the device type you choose to attach when submitting a score.</p>
+
+<h2>Other services involved</h2>
+<ul>
+  <li><b>Vercel</b> hosts the site and its small server functions. Like any web host, it handles your IP address and
+    browser details to deliver the pages and may keep short-lived logs. See
+    <a href="https://vercel.com/legal/privacy-policy">Vercel's privacy policy</a>.</li>
+  <li><b>Upstash</b> provides the database behind the leaderboards and counters (the data in the table above).
+    See <a href="https://upstash.com/trust/privacy.pdf">Upstash's privacy policy</a>.</li>
+  <li><b>GitHub</b>: the ASMR audio and the video downloads are served from GitHub Pages and GitHub Releases, so
+    GitHub sees your IP address when your browser fetches them (only when the audio plays or you download something). See
+    <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub's privacy statement</a>.</li>
+  <li><b>GitLab</b>: DMCA Dodge and Bootstrap Typer load pepsipu's bootstrap.bas straight from GitLab, so GitLab
+    sees your IP address when you play them. See <a href="https://about.gitlab.com/privacy/">GitLab's privacy statement</a>.</li>
+  <li><b>HackerOne</b>: our server reads gezine's public hacktivity from HackerOne. Nothing about you is sent.</li>
+  <li>Links to YouTube, Reddit and other sites only contact them if you click them.</li>
+</ul>
+<p>The fonts are stored on this site, so nothing is loaded from Google. Some of these services are in the United
+States, so data they handle may be processed there under their own safeguards.</p>
+
+<h2>Your rights</h2>
+<p>Depending on where you live (for example under the GDPR, UK GDPR or California's CCPA), you can ask what we hold
+about you, have it corrected or deleted, object to it being used, or take it with you. In practice the only thing we
+hold that's linked to you is a leaderboard entry, and we'll remove or rename it if you ask. You can also complain to
+your local data protection authority. We don't sell or share personal data, and we never will.</p>
+
+<h2>Children</h2>
+<p>The site isn't aimed at young children. Please don't use your real name on a leaderboard, whatever your age.</p>
+
+<h2>Changes</h2>
+<p>If this page changes, the date at the top changes too. The full history is public in the site's
+<a href="https://github.com/calamityCocoa/gezinegoodboy/commits/main/privacy.html">source code</a>.</p>
+</article>
+</main>
+<footer>
+  <p class="footer-links"><a href="/">Home</a> &middot; <a href="terms">Terms &amp; takedowns</a> &middot; <a href="https://github.com/calamityCocoa/gezinegoodboy">Source code</a></p>
+</footer>
+</body>
+</html>
