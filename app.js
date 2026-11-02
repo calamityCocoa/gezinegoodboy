@@ -71,7 +71,7 @@ const ETAS = [
 $("eta-btn").onclick = () => show("eta", ETAS[Math.floor(Math.random() * ETAS.length)]);
 
 let isBad = false, pats = 0, fs = 0;
-// Headset Hero (game.js): the play buttons, the leaderboard on the page,
+// DMCA Dodge (game.js): the play buttons, the leaderboard on the page,
 // and 30 headpats (or 30 respects) opens it as a surprise
 const GAME_AT = 30;
 let gameOpened = false;
@@ -353,61 +353,107 @@ if (new URLSearchParams(location.search).get("test") === "flip") {
 
 }
 
-function backgroundAsmr() {
-// ---------- background ASMR ----------
-// Browsers only allow sound after the visitor interacts, so it starts muted and
-// turns the sound on at the first click or key press (unless they switched it off).
-(function () {
-  const bg = $("bg"), btn = $("sound-btn");
-  // no background video on devices that can't handle it (old handhelds, cars): show the still instead
-  if (!DEVICE.allowVideo) {
-    bg.removeAttribute("autoplay");
-    bg.preload = "none";
-    while (bg.firstChild) bg.removeChild(bg.firstChild);
-    bg.load();
-    btn.hidden = true;
-    return;
+// ---------- the ASMR (audio only) ----------
+// A proper player in the ASMR card plus a little floating one. It starts at the first
+// click / tap / key press (browsers don't allow sound before that) unless you switch
+// that off, and picks up where you left off last time.
+function asmrPlayer() {
+  const audio = $("asmr-audio"), play = $("asmr-play"), seek = $("asmr-seek"), time = $("asmr-time"),
+    disc = $("asmr-disc"), mini = $("mini-player"), auto = $("asmr-auto");
+  if (!audio || !play) return;
+  const LENGTH = 1858.7; // seconds
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  };
+  const fmt = (t) => { t = Math.max(0, Math.floor(t || 0)); return Math.floor(t / 60) + ":" + String(t % 60).padStart(2, "0"); };
+  const saveData = !!(navigator.connection && navigator.connection.saveData);
+
+  // auto-start is on by default, but not on Data Saver or in cars
+  const savedAuto = store.get("asmr-auto");
+  let autoOn = savedAuto ? savedAuto === "on" : DEVICE.allowVideo !== false && !saveData;
+  auto.checked = autoOn;
+  auto.onchange = () => { autoOn = auto.checked; store.set("asmr-auto", autoOn ? "on" : "off"); };
+
+  // pick up where they left off
+  const resumeAt = Number(store.get("asmr-pos")) || 0;
+  seek.value = String(resumeAt);
+  time.textContent = fmt(resumeAt) + " / " + fmt(LENGTH);
+  let primed = false, userPaused = false, dragging = false;
+  function prime() {
+    if (primed) return;
+    primed = true;
+    audio.preload = "auto";
+    if (resumeAt > 5 && resumeAt < LENGTH - 5) {
+      const jump = () => { try { audio.currentTime = resumeAt; } catch (e) {} };
+      if (audio.readyState >= 1) jump(); else audio.addEventListener("loadedmetadata", jump, { once: true });
+    }
   }
-  let wantSound = true;
-  try { wantSound = localStorage.getItem("asmr-sound") !== "off"; } catch (e) {}
 
-  function label() { btn.textContent = bg.muted ? "🔇 Sound on" : "🔊 Sound off"; }
-  function setSound(on, remember) {
-    bg.muted = !on;
-    // if the browser still says no to sound, keep it playing muted rather than stopped
-    safePlay(bg, () => { bg.muted = true; safePlay(bg); label(); });
-    if (remember) { wantSound = on; try { localStorage.setItem("asmr-sound", on ? "on" : "off"); } catch (e) {} }
-    label();
+  function render() {
+    const playing = !audio.paused;
+    const icon = playing ? '<i class="icon-pause"></i>' : '<i class="icon-play"></i>';
+    const label = playing ? "Pause the ASMR" : "Play the ASMR";
+    play.innerHTML = icon;
+    play.setAttribute("aria-label", label);
+    mini.innerHTML = '<img src="images/record.png" alt=""' + (playing ? ' class="spin"' : "") + ">" + icon +
+      '<span class="label">' + (playing ? "ASMR playing" : "ASMR paused") + "</span>";
+    mini.setAttribute("aria-label", label);
+    disc.classList.toggle("spin", playing);
+  }
+  function start() { prime(); safePlay(audio, render); }
+  function toggle() {
+    if (audio.paused) { userPaused = false; start(); }
+    else { userPaused = true; audio.pause(); }
+  }
+  play.onclick = toggle;
+  mini.onclick = toggle;
+  audio.addEventListener("play", () => { mini.hidden = false; render(); });
+  audio.addEventListener("pause", render);
+  audio.addEventListener("timeupdate", () => {
+    const t = audio.currentTime;
+    if (!dragging) seek.value = String(Math.floor(t));
+    time.textContent = fmt(t) + " / " + fmt(audio.duration || LENGTH);
+    if (Math.floor(t) % 5 === 0) store.set("asmr-pos", String(Math.floor(t)));
+  });
+  seek.addEventListener("input", () => { dragging = true; time.textContent = fmt(seek.value) + " / " + fmt(LENGTH); });
+  seek.addEventListener("change", () => {
+    dragging = false;
+    prime();
+    const to = Number(seek.value);
+    store.set("asmr-pos", String(to));
+    if (audio.readyState >= 1) { try { audio.currentTime = to; } catch (e) {} }
+    else audio.addEventListener("loadedmetadata", () => { try { audio.currentTime = to; } catch (e) {} }, { once: true });
+    if (audio.paused) start();
+  });
+
+  // lock screen and headphone buttons
+  if ("mediaSession" in navigator && window.MediaMetadata) {
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: "bootstrap.bas ASMR", artist: "gezine", album: "Gezine Good Boy Tracker",
+        artwork: [{ src: new URL("images/record.png", location.href).href, sizes: "320x320", type: "image/png" }],
+      });
+      navigator.mediaSession.setActionHandler("play", () => { userPaused = false; start(); });
+      navigator.mediaSession.setActionHandler("pause", () => { userPaused = true; audio.pause(); });
+    } catch (e) {}
   }
 
-  btn.onclick = () => setSound(bg.muted, true);
-  bg.addEventListener("volumechange", label);
-
-  // people on Data Saver only get the video if they press the sound button
-  const saveData = navigator.connection && navigator.connection.saveData;
-  if (saveData) { bg.removeAttribute("autoplay"); bg.preload = "none"; wantSound = false; }
-
-  // the HTML doesn't autoplay (so old consoles and data-savers don't download it); start it here
-  if (!saveData) bg.preload = "auto";
-
-  // try with sound straight away (works if they've been here before), otherwise muted
-  bg.muted = !wantSound;
-  if (!saveData) safePlay(bg, () => { bg.muted = true; safePlay(bg); label(); });
-  label();
-
-  // phones only count a tap once the finger lifts, so listen for all of these until it works
-  const EVENTS = ["pointerdown", "pointerup", "touchend", "click", "keydown"];
+  // start at the first interaction (phones only count a tap once the finger lifts, so listen for all of these)
+  const EVENTS = ["pointerup", "touchend", "click", "keydown"];
+  const stopListening = () => EVENTS.forEach((t) => removeEventListener(t, firstTouch, true));
   function firstTouch(e) {
-    if (e.target === btn || !wantSound) return; // the button handles itself
-    if (bg.muted || bg.paused) setSound(true, false); // paused happens in iOS Low Power Mode
-    if (!bg.muted) EVENTS.forEach((t) => removeEventListener(t, firstTouch, true));
+    if (!autoOn || userPaused) return;
+    const t = e.target;
+    if (t && t.closest && t.closest("#asmr-play, #mini-player, .autoplay, #asmr-seek")) return; // those handle themselves
+    if (audio.paused) start();
   }
+  audio.addEventListener("playing", stopListening);
   EVENTS.forEach((t) => addEventListener(t, firstTouch, true));
-})();
-
+  render();
 }
 
 if (!DEVICE.legacy) {
   main();
-  backgroundAsmr();
+  asmrPlayer();
 }

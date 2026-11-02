@@ -33,211 +33,126 @@
 <meta name="twitter:player:stream:content_type" content="video/mp4">
 <meta name="twitter:player:width" content="720">
 <meta name="twitter:player:height" content="720">
-<style>
-  body {
-    max-width: 680px;
-    margin: 0 auto;
-    padding: 16px;
-    font: 17px/1.5 Georgia, "Times New Roman", serif;
-    color: #111;
-    background: rgba(255, 255, 255, .86);
-    min-height: 100vh;
-    box-sizing: border-box;
-  }
-  h1 { font-size: 2em; line-height: 1.2; margin: 16px 0 4px; }
-  h2 { font-size: 1.25em; margin: 32px 0 8px; }
-  marquee { font-size: .9em; }
-  .verdict { font-size: 1.4em; font-weight: bold; margin: 8px 0 4px; }
-  .toggle { margin: 0 0 20px; font-size: .9em; }
-  .toggle input { margin: 0 4px 0 0; vertical-align: middle; }
-  small { color: #555; }
-
-  /* the drawing on the left, his speech bubble on the right */
-  .hero { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-bottom: 16px; }
-  .bubble { flex: 1 1 200px; border: 1px solid #111; border-radius: 12px; padding: 10px 14px; margin: 0; }
-
-  /* square stage: gezine close up, or zoomed out with John Nintendo */
-  #stage { position: relative; width: 320px; max-width: 100%; height: 320px; height: min(320px, calc(100vw - 32px));
-           overflow: hidden; border: 1px solid #111; background: #fff; }
-  @supports (aspect-ratio: 1) { #stage { height: auto; aspect-ratio: 1; } }
-  #gez {
-    position: absolute; left: 6.19%; bottom: 2%; width: 87.62%; aspect-ratio: 400 / 420;
-    transform-origin: 44.12% 98.1%;              /* her feet */
-    transition: transform 1s ease-in-out;
-  }
-  #gez.far { transform: translate(10.06%, 1.77%) scale(.693); }  /* where she stands in John's scene */
-  #gez img { display: block; width: 100%; height: auto; transform-origin: 50% 100%; }
-  #john-img { position: absolute; top: 0; left: 0; width: 100%; height: auto; }
-  [hidden] { display: none !important; }
-
-  /* smooth motion on top of the hand-drawn frames */
-  body.good #gezine-img { animation: bob 1.64s ease-in-out infinite; }
-  body.good #gezine-img.patting { animation: squish 1.46s ease-in-out 1; }
-  body.good #gezine-img.gaming { animation: bounce .6s ease-in-out infinite; }
-  body.bad #gezine-img { animation: tremble .41s linear infinite; }
-  @keyframes bob { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-6px) scale(.99, 1.015); } }
-  @keyframes squish {
-    0% { transform: scale(1, 1); } 15% { transform: scale(1.03, .95); } 40% { transform: scale(1.06, .9); }
-    62% { transform: translateY(-4px) scale(.97, 1.05); } 80%, 100% { transform: scale(1, 1); } }
-  @keyframes bounce { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-3px) rotate(1deg); } }
-  @keyframes tremble {
-    0%, 100% { transform: translate(0, 0) rotate(0); } 20% { transform: translate(-2px, 1px) rotate(-.8deg); }
-    40% { transform: translate(2px, -1px) rotate(.6deg); } 60% { transform: translate(-1px, 1px) rotate(.8deg); }
-    80% { transform: translate(2px, 0) rotate(-.5deg); } }
-
-  table { border-collapse: collapse; margin: 8px 0; }
-  th, td { border: 1px solid #999; padding: 4px 8px; text-align: left; vertical-align: top; }
-  #reports-table { width: 100%; font-size: .95em; }
-  tr.nintendo { font-weight: bold; }
-  button { font: inherit; font-size: .9em; }
-  .buttons p { margin: 6px 0; }
-  .credits { padding-left: 20px; }
-  .credits li { margin: 4px 0; }
-  footer { margin-top: 40px; border-top: 1px solid #ccc; padding-top: 8px; }
-  footer p { margin: 4px 0; }
-
-  /* the ASMR plays behind everything; the page is a see-through panel on top */
-  html { background: #fff; }
-  #bg { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: -1; width: 100%; height: 100%; object-fit: contain; background: #fff; }
-  #sound-btn {
-    position: fixed; z-index: 10; padding: 8px 14px; min-height: 44px; color: #111; font: inherit; font-size: .9em;
-    right: calc(16px + env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom));
-    background: #fff; border: 1px solid #111; border-radius: 999px; box-shadow: 0 2px 8px rgba(0, 0, 0, .15); cursor: pointer;
-  }
-  /* Headset Hero on the page */
-  .play-btn { font-size: 1em; padding: 8px 16px; border-radius: 999px; border: 1px solid #111; background: #111; color: #fff; cursor: pointer; }
-  #game-board .hh-board { width: 100%; max-width: 440px; }
-  #game-board .hh-board td:first-child, #game-board .hh-board th:first-child { width: 2em; text-align: right; }
-  #game-board .hh-board td:last-child, #game-board .hh-board th:last-child { text-align: right; }
-  #game-board .hh-board td:nth-child(2) { overflow-wrap: anywhere; }
-  #game-board tr.me { background: #ffe8f0; font-weight: bold; }
-  /* which device you're on (device.js) */
-  .device-line { display: none; margin: 10px 0 0; padding: 6px 10px; font-size: .92em; background: #fff;
-                 border-left: 4px solid #111; border-left-color: var(--accent, #111); }
-  html { color-scheme: light; }
-  a:focus, button:focus, input:focus { outline: 3px solid #7fb8f0; outline-offset: 2px; }
-  a:focus:not(:focus-visible), button:focus:not(:focus-visible) { outline: none; }
-
-  /* credits with profile pictures */
-  .credits { list-style: none; padding: 0; }
-  .credits li { position: relative; margin: 12px 0; min-height: 50px; padding-left: 62px; }
-  .avatar { position: absolute; left: 0; top: 2px; width: 48px; height: 48px; margin: 0; border-radius: 50%; border: 1px solid #111;
-            background: #fff; display: block; object-fit: cover; }
-  .avatar.initial { text-align: center; line-height: 48px; font-weight: bold; color: #fff; overflow: hidden; }
-  .credits b.who { display: block; }
-
-  /* old browsers get the "classic" page (legacy.js): no video, animations or game */
-  .legacy-only { display: none; }
-  .legacy .legacy-only { display: block; }
-  .legacy .modern-only, .legacy #bg, .legacy #sound-btn, .legacy .toggle, .legacy .play-btn { display: none !important; }
-  .legacy body { background: #fff; padding-bottom: 24px; margin: 0 auto !important; }
-  .legacy #gezine-img { animation: none !important; }
-
-  /* TVs and consoles on the sofa: bigger everything, obvious focus */
-  .tv body { font-size: 20px; max-width: 900px; }
-  .tv button, .fam-nintendo button { min-height: 48px; padding: 8px 18px; font-size: 1em; }
-  .tv a:focus, .tv button:focus, .fam-nintendo a:focus, .fam-nintendo button:focus { outline: 4px solid #7fb8f0; outline-color: var(--accent, #7fb8f0); outline-offset: 3px; }
-  /* e-ink: no motion at all */
-  .eink *, .eink *::before, .eink *::after { animation: none !important; transition: none !important; }
-  @media (prefers-reduced-motion: reduce) {
-    #gezine-img { animation: none !important; }
-    #gez { transition: none !important; }
-  }
-  /* small handheld screens (3DS, KaiOS, tiny phones) */
-  @media (max-width: 360px) {
-    body { font-size: 15px; }
-    h1 { font-size: 1.6em; }
-  }
-
-  /* phones and tablets */
-  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-  body { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right));
-         padding-bottom: calc(80px + env(safe-area-inset-bottom)); overflow-wrap: break-word; }
-  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  @media (pointer: coarse) { button { min-height: 44px; padding: 6px 14px; } }
-  /* wide screens: page on the left, gezine in full view on the right */
-  @media (min-width: 1100px) {
-    body { margin: 0 0 0 4vw; border-left: 1px solid #ddd; border-right: 1px solid #ddd; }
-    #bg { object-position: right center; }
-  }
-</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;700;800&display=swap">
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<video id="bg" muted loop playsinline preload="none" poster="images/asmr-poster.jpg" aria-hidden="true">
-  <source src="https://calamitycocoa.github.io/gezinegoodboy-media/asmr.mp4" type="video/mp4">
-  <source src="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/bootstrap-asmr.mp4" type="video/mp4">
-</video>
-<button id="sound-btn" type="button">🔇 Sound on</button>
 
-<h1>Is gezine a good boy?</h1>
-<marquee>BREAKING NEWS: John Nintendo's lawyers have entered the chat &bull;&bull;&bull; ETA WEN? &bull;&bull;&bull; DO NOT UPDATE YOUR SWITCH 2 &bull;&bull;&bull; gezine has been spotted near a hut &bull;&bull;&bull; it's not a brick if you believe hard enough &bull;&bull;&bull; John Nintendo is watching &bull;&bull;&bull;</marquee>
-<p class="device-line" id="device-line"></p>
-<p class="verdict" id="verdict">Checking...</p>
-<p class="toggle"><label><input type="checkbox" id="uwu-toggle"> uwu mode</label></p>
-
-<div class="hero">
-  <div id="stage">
-    <div id="gez"><img id="gezine-img" src="images/good/0.png" alt="gezine being a good boy"></div>
-    <img id="john-img" src="images/john/0.png" alt="John Nintendo looming over gezine" hidden>
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="#top"><img src="favicon.png" alt="" width="28" height="28"><span>gezine good boy</span></a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#tracker">Tracker</a>
+      <a href="#reports-card">Reports</a>
+      <a href="#asmr">ASMR</a>
+      <a href="#dmca-dodge" class="modern-only">DMCA Dodge</a>
+      <a href="#credits">Credits</a>
+    </nav>
   </div>
-  <p class="bubble" id="bubble">...</p>
-</div>
+</header>
+<div class="ticker"><marquee scrollamount="5">BREAKING NEWS: John Nintendo's lawyers have entered the chat &bull;&bull;&bull; ETA WEN? &bull;&bull;&bull; DO NOT UPDATE YOUR SWITCH 2 &bull;&bull;&bull; gezine has been spotted near a hut &bull;&bull;&bull; it's not a brick if you believe hard enough &bull;&bull;&bull; John Nintendo is watching &bull;&bull;&bull;</marquee></div>
 
-<p>This silly little website tracks Gezine's hackerone account to make sure that he hasn't been naughty and earned money from John Nintendo.
-If he is caught earning money from John Nintendo then it will show on this page. Gezine will get a slap on the ass if he does anything like that as he has been a bad boy. A big ass whooping for him.</p>
+<main id="top">
 
-<table>
-  <tr><th>Reports to John Nintendo</th><td id="count">?</td></tr>
-  <tr><th>Days since the last one</th><td id="days">?</td></tr>
-  <tr><th>Total hackerone reports</th><td id="total">?</td></tr>
-</table>
+<section class="card hero" id="tracker">
+  <div class="hero-head">
+    <h1 class="eyebrow">Is gezine a good boy?</h1>
+    <p class="verdict" id="verdict">Checking...</p>
+    <p class="device-line" id="device-line"></p>
+  </div>
+  <div class="hero-art">
+    <div id="stage">
+      <div id="gez"><img id="gezine-img" src="images/good/0.png" alt="gezine being a good boy"></div>
+      <img id="john-img" src="images/john/0.png" alt="John Nintendo looming over gezine" hidden>
+    </div>
+    <p class="bubble" id="bubble">...</p>
+  </div>
+  <div class="hero-info">
+    <div class="stats">
+      <div class="stat"><span class="num" id="count">?</span><span class="lbl">reports to John Nintendo</span></div>
+      <div class="stat"><span class="num" id="days">?</span><span class="lbl">days since the last one</span></div>
+      <div class="stat"><span class="num" id="total">?</span><span class="lbl">HackerOne reports in total</span></div>
+    </div>
+    <div class="actions">
+      <button id="mood-btn" class="btn btn-main" type="button">Give gezine headpats</button>
+      <button id="eta-btn" class="btn" type="button">ETA WEN?</button>
+      <button class="btn btn-game modern-only" type="button" data-play-game>Play DMCA Dodge</button>
+    </div>
+    <p class="action-out"><span id="mood-count"></span> <span id="eta"></span></p>
+    <p id="global" class="global" hidden>Everyone so far: <b id="g-pats">0</b> headpats and <b id="g-fs">0</b> respects paid.</p>
+    <p class="toggle modern-only"><label><input type="checkbox" id="uwu-toggle"> uwu mode</label></p>
+  </div>
+</section>
 
-<div class="buttons">
-  <p><button id="mood-btn">...</button> <span id="mood-count"></span></p>
-  <p><button id="eta-btn">ETA WEN?</button> <span id="eta"></span></p>
-  <p class="modern-only"><button class="play-btn" data-play-game>🎧 Play Headset Hero</button></p>
-  <p id="global" hidden>Everyone so far: <b id="g-pats">0</b> headpats and <b id="g-fs">0</b> respects paid.</p>
-</div>
+<section class="card">
+    <h2>What is this?</h2>
+    <p>This silly little website tracks gezine's HackerOne account to make sure that he hasn't been naughty and earned money from John Nintendo.
+    If he is caught earning money from John Nintendo then it will show on this page. gezine will get a slap on the ass if he does anything like that as he has been a bad boy. A big ass whooping for him.</p>
+    <p class="quote">"I just want to kiss you John Nintendo you are so sexy and strong and muscular with your awesome business practices, please take all of my money"</p>
+  </section>
 
-<h2>His reports</h2>
-<div class="table-scroll"><table id="reports-table">
-  <thead><tr><th>Report</th><th>Company</th><th>Status</th><th>Date</th></tr></thead>
-  <tbody id="reports"><tr><td colspan="4">Loading...</td></tr></tbody>
-</table></div>
-<p><small id="checked"></small></p>
+  <section class="card" id="reports-card">
+    <h2>His reports</h2>
+    <div class="table-scroll"><table id="reports-table">
+      <thead><tr><th>Report</th><th>Company</th><th>Status</th><th>Date</th></tr></thead>
+      <tbody id="reports"><tr><td colspan="4">Loading...</td></tr></tbody>
+    </table></div>
+    <p><small id="checked"></small></p>
+  </section>
 
-<h2>gezine's bootstrap.bas ASMR</h2>
-<p>That's gezine in the background, whispering a SmileBASIC 4 bootstrap.bas into a microphone for 31 minutes.
-Headphones recommended. Use the sound button in the corner to turn it on or off.</p>
-<p>Also on <a href="https://youtu.be/_kSztm_dDDk">YouTube</a>, uploaded by <a href="https://miyao.dev">miyao</a> (thank you!).
-If that doesn't play, download it: <a href="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/bootstrap-asmr.mp4">smaller (101 MB)</a> /
-<a href="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/bootstrap-asmr-full.mp4">full quality (253 MB)</a>.</p>
-<p><small>Before anyone says it: yes, we know <a href="https://github.com/pepsipu"><b>pepsipu</b></a> made <a href="https://gitlab.com/pepsipu/ns2jb">ns2jb</a>, which is where this bootstrap.bas comes from. gezine didn't write it, he's just being a good boy and reading it out for us.</small></p>
+<section class="card" id="asmr">
+  <h2>gezine's bootstrap.bas ASMR</h2>
+  <div class="player modern-only">
+    <img class="disc" id="asmr-disc" src="images/record.png" alt="" width="112" height="112">
+    <div class="player-main">
+      <p class="track"><b>bootstrap.bas ASMR</b><span>gezine &middot; 31 minutes &middot; headphones recommended</span></p>
+      <div class="controls">
+        <button id="asmr-play" class="btn play" type="button" aria-label="Play the ASMR"><i class="icon-play"></i></button>
+        <input id="asmr-seek" type="range" min="0" max="1859" step="1" value="0" aria-label="Position in the ASMR">
+        <span id="asmr-time" class="time">0:00 / 30:58</span>
+      </div>
+      <label class="autoplay"><input type="checkbox" id="asmr-auto"> Start playing when I open the page</label>
+    </div>
+  </div>
+  <audio id="asmr-audio" preload="none" loop>
+    <source src="https://calamitycocoa.github.io/gezinegoodboy-media/asmr.mp3" type="audio/mpeg">
+    <source src="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/asmr.mp3" type="audio/mpeg">
+  </audio>
+  <p class="legacy-only"><a href="https://calamitycocoa.github.io/gezinegoodboy-media/asmr.mp3">Listen to the ASMR (MP3, 15 MB)</a></p>
+  <p>gezine whispering a SmileBASIC 4 bootstrap.bas into a microphone for 31 minutes.
+  Want the video with the spinning record and gezine running around? It's on <a href="https://youtu.be/_kSztm_dDDk">YouTube</a>, uploaded by <a href="https://miyao.dev">miyao</a> (thank you!).
+  Or download it: <a href="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/bootstrap-asmr.mp4">video (101 MB)</a> /
+  <a href="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/bootstrap-asmr-full.mp4">full quality video (253 MB)</a> /
+  <a href="https://github.com/calamityCocoa/gezinegoodboy/releases/download/asmr/asmr.mp3">audio only (15 MB)</a>.</p>
+  <p><small>Before anyone says it: yes, we know <a href="https://github.com/pepsipu"><b>pepsipu</b></a> made <a href="https://gitlab.com/pepsipu/ns2jb">ns2jb</a>, which is where this bootstrap.bas comes from. gezine didn't write it, he's just being a good boy and reading it out for us.</small></p>
+</section>
 
-<div class="modern-only">
-<h2 id="headset-hero">Headset Hero</h2>
-<p>gezine put her headset on. Catch the notes, SmileBASIC tokens and stars, and dodge John Nintendo's DMCA letters.
-Get hit three times and the real <a href="https://gitlab.com/pepsipu/ns2jb/-/blob/main/bootstrap.bas">bootstrap.bas</a> falls on her, line by line.
-Works with a keyboard, a mouse or a finger. (Psst: 30 headpats also gets you in.)</p>
-<p><button class="play-btn" data-play-game>▶ Play Headset Hero</button></p>
-<h3>Leaderboard</h3>
-<div id="game-board"><p><small>Loading...</small></p></div>
-</div>
-<div class="legacy-only">
-<h2>Headset Hero</h2>
-<p>gezine's headset game needs a newer browser than this one. Try it on a phone, a computer or a Switch.</p>
-</div>
+<section class="card dodge modern-only" id="dmca-dodge">
+  <img class="dodge-art" src="images/headset/wave2.png" alt="" width="140">
+  <h2>DMCA Dodge</h2>
+  <p>gezine put her headset on. Catch the notes, SmileBASIC tokens and stars, and dodge John Nintendo's DMCA letters.
+  Get hit three times and John Nintendo himself shows up, and the real <a href="https://gitlab.com/pepsipu/ns2jb/-/blob/main/bootstrap.bas">bootstrap.bas</a> falls on her, line by line.</p>
+  <p><small>Keyboard, mouse, touch or controller. (Psst: 30 headpats also gets you in.)</small></p>
+  <p><button class="btn btn-main btn-big" type="button" data-play-game>&#9654; Play DMCA Dodge</button></p>
+  <h3>Leaderboard</h3>
+  <div id="game-board"><p><small>Loading...</small></p></div>
+</section>
+<section class="card legacy-only">
+  <h2>DMCA Dodge</h2>
+  <p>gezine's game needs a newer browser than this one. Try it on a phone, a computer or a Switch.</p>
+</section>
 
-<p>I just want to kiss you John Nintendo you are so sexy and strong and muscular with your awesome business practices, please take all of my money</p>
-
-<h2>Credits</h2>
-<ul class="credits">
+<section class="card" id="credits">
+  <h2>Credits</h2>
+  <ul class="credits">
   <li><a href="https://www.reddit.com/user/Muveeer/"><img class="avatar" src="images/credits/muveeer.jpg" width="48" height="48" alt="" loading="lazy"></a>
     <b class="who"><a href="https://www.reddit.com/user/Muveeer/">u/Muveeer</a></b> Original gezine drawing, from the <a href="https://www.reddit.com/r/switch2hacks/comments/1xhtmjt/two_sides/">"Two sides" post</a>. The animations here are all based on it.</li>
   <li><a href="https://github.com/calamityCocoa"><img class="avatar" src="images/credits/calamitycocoa.jpg" width="48" height="48" alt="" loading="lazy"></a>
     <b class="who"><a href="https://github.com/calamityCocoa">calamityCocoa</a></b> Made this website. The code is on <a href="https://github.com/calamityCocoa/gezinegoodboy">GitHub</a>.</li>
   <li><a href="https://github.com/pepsipu"><img class="avatar" src="images/credits/pepsipu.jpg" width="48" height="48" alt="" loading="lazy"></a>
-    <b class="who"><a href="https://github.com/pepsipu">pepsipu</a></b> Made <a href="https://gitlab.com/pepsipu/ns2jb">ns2jb</a> and the bootstrap.bas gezine reads in the ASMR (and that buries her in Headset Hero).</li>
+    <b class="who"><a href="https://github.com/pepsipu">pepsipu</a></b> Made <a href="https://gitlab.com/pepsipu/ns2jb">ns2jb</a> and the bootstrap.bas gezine reads in the ASMR (and that buries her in DMCA Dodge).</li>
   <li><a href="https://miyao.dev"><img class="avatar" src="images/credits/miyao.jpg" width="48" height="48" alt="" loading="lazy"></a>
     <b class="who"><a href="https://miyao.dev">miyao</a></b> Uploaded the ASMR to <a href="https://youtu.be/_kSztm_dDDk">YouTube</a>.</li>
   <li><a href="https://github.com/Gezine"><img class="avatar" src="images/credits/gezine.jpg" width="48" height="48" alt="" loading="lazy"></a>
@@ -246,18 +161,21 @@ Works with a keyboard, a mouse or a finger. (Psst: 30 headpats also gets you in.
     <b class="who">HackerOne</b> Report data comes from <a href="https://hackerone.com/hacktivity">HackerOne's public hacktivity</a>.</li>
   <li><a href="https://www.reddit.com/r/switch2hacks/"><img class="avatar" src="images/credits/switch2hacks.jpg" width="48" height="48" alt="" loading="lazy"></a>
     <b class="who"><a href="https://www.reddit.com/r/switch2hacks/">r/switch2hacks</a></b> The place to go for Switch 2 hacking news. Go say hi.</li>
-</ul>
+  </ul>
+</section>
+
+</main>
 
 <footer>
-  <p><small>Not affiliated with Nintendo, HackerOne or gezine.</small></p>
-  <p><small>This whole website is satire. It's all a big joke, so don't take offence, everything is over-exaggerated on purpose.</small></p>
-  <p><small>This website is under construction forever. You are visitor number 000069420.</small></p>
+  <p>Not affiliated with Nintendo, HackerOne or gezine.</p>
+  <p>This whole website is satire. It's all a big joke, so don't take offence, everything is over-exaggerated on purpose.</p>
+  <p>This website is under construction forever. You are visitor number 000069420.</p>
 </footer>
+
+<button id="mini-player" class="mini modern-only" type="button" aria-label="Play the ASMR" hidden><img src="images/record.png" alt=""><i class="icon-play"></i><span class="label">ASMR</span></button>
 
 <script type="module" src="game.js"></script>
 <script type="module" src="app.js"></script>
 <script nomodule src="legacy.js"></script>
-
-
 </body>
 </html>

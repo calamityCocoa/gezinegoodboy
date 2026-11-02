@@ -1,4 +1,4 @@
-// Vercel function: Headset Hero global leaderboard.
+// Vercel function: DMCA Dodge global leaderboard.
 //   GET  /api/scores                          -> { top: [{ name, score }] }   (best 10)
 //   POST /api/scores?start=1                  -> { run }   a game started; the id is needed to submit
 //   POST /api/scores  { run, name, score }    -> { top, rank, best }

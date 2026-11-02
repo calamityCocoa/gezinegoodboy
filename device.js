@@ -33,7 +33,7 @@
     "xbox":      ["Xbox", "xbox", "#107c10", "An Xbox. gezine is a Nintendo and PlayStation man, but he'll allow it.", "Use the controller, or move the cursor."],
     "steamdeck": ["Steam Deck", "pc", "#1a9fff", "A Steam Deck! Verified good boy.", "Touch the screen, or use the controls."],
     "quest":     ["Meta Quest", "vr", "#1c2b33", "Reading this in VR. gezine is life-size now.", "Point and pull the trigger."],
-    "tesla":     ["Tesla", "car", "#cc0000", "Please don't play Headset Hero while driving. gezine needs you alive.", "Tap the screen (parked only, please)."],
+    "tesla":     ["Tesla", "car", "#cc0000", "Please don't play DMCA Dodge while driving. gezine needs you alive.", "Tap the screen (parked only, please)."],
     "firetv":    ["Fire TV", "tv", "#ff9900", "On a Fire TV! Big gezine energy.", "Use the remote's arrows and select."],
     "chromecast":["Google TV", "tv", "#4285f4", "On a TV! Big gezine energy.", "Use the remote's arrows and select."],
     "lgtv":      ["LG TV", "tv", "#a50034", "On an LG TV! Big gezine energy.", "Use the remote's arrows and OK."],

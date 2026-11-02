@@ -1,4 +1,4 @@
-// Headset Hero: gezine's headset game.
+// DMCA Dodge: gezine's game (once called Headset Hero).
 // gezine runs along the bottom catching music notes and SmileBASIC tokens in her
 // headset while dodging John Nintendo's DMCA letters. When she runs out of hearts,
 // the real lines of pepsipu's bootstrap.bas (fetched live from GitLab) rain down
@@ -25,7 +25,11 @@
   const CODE_URL = "https://gitlab.com/api/v4/projects/pepsipu%2Fns2jb/repository/files/bootstrap.bas/raw?ref=main";
   const CODE_LINK = "https://gitlab.com/pepsipu/ns2jb/-/blob/main/bootstrap.bas";
   const API = "/api/scores";
-  const DYING_TRIP = 1.1, BURY_SPAWN = 2.6, BURY_SETTLE = 0.8;
+  const DYING_TRIP = 1.1, BURY_SPAWN = 2.2, BURY_SETTLE = 0.8;
+  // John Nintendo's frames (the same art as the tracker). They have gezine caught in them,
+  // with her feet at JOHN_FEET (frame pixels) and her standing JOHN_GEZ_H pixels tall.
+  const JOHN_W = 423, JOHN_H = 420, JOHN_FEET = [218, 410], JOHN_GEZ_H = 215;
+  const JOHN_ENTER = [0.35, 0.7, 1.1, 1.4], JOHN_LOOP = [0.55, 0.9, 1.55, 1.85]; // cumulative seconds
 
   // ---------------------------------------------------------------- helpers
   const store = {
@@ -45,10 +49,12 @@
   let spritesReady = null;
   function loadSprites() {
     if (!spritesReady) {
-      spritesReady = Promise.all(Object.keys(ANCHORS).map((n) => new Promise((ok) => {
+      const files = Object.keys(ANCHORS).map((n) => [n, "images/headset/" + n + ".png"]);
+      for (let i = 0; i < 4; i++) files.push(["jenter" + i, "images/john-enter/" + i + ".png"], ["jloop" + i, "images/john/" + i + ".png"]);
+      spritesReady = Promise.all(files.map(([n, src]) => new Promise((ok) => {
         const im = new Image();
         im.onload = im.onerror = ok;
-        im.src = "images/headset/" + n + ".png";
+        im.src = src;
         imgs[n] = im;
       })));
     }
@@ -178,7 +184,7 @@
     root.hidden = true;
     root.setAttribute("role", "dialog");
     root.setAttribute("aria-modal", "true");
-    root.setAttribute("aria-label", "Headset Hero, gezine's headset game");
+    root.setAttribute("aria-label", "DMCA Dodge, gezine's game");
     root.innerHTML = '<canvas aria-hidden="true"></canvas>' +
       '<button id="hh-pause" class="hh-corner" type="button" aria-label="Pause" hidden><i></i><i></i></button>' +
       '<button id="hh-exit" class="hh-corner" type="button" aria-label="Leave the game">✕</button>' +
@@ -306,12 +312,12 @@
 
   // ---------------------------------------------------------------- game state
   let state = "closed", raf = 0, last = 0, T = 0, spawnIn = 0, runId = null, runPromise = null;
-  let g = null, items = [], pops = [], score = 0, lives = 3, combo = 0, best = 0, overIn = 0, bury = null;
+  let g = null, items = [], pops = [], score = 0, lives = 3, combo = 0, best = 0, overIn = 0, bury = null, johnT = -1;
   let pointerX = null, pointerDown = false, padActive = false, padX = 0;
 
   function reset() {
     g = { x: W / 2, vx: 0, dir: 1, stun: 0, jump: 0, anim: 0, dead: false };
-    items = []; pops = []; bury = null;
+    items = []; pops = []; bury = null; johnT = -1;
     score = 0; lives = 3; combo = 0; T = 0; spawnIn = 0.6; overIn = 0;
     pointerX = null; pointerDown = false; keys.left = keys.right = false; padX = 0;
   }
@@ -350,8 +356,19 @@
     if (state === "dying") {
       for (const it of items) { it.y += it.vy * dt; it.rot += it.vr * dt; }
       items = items.filter((it) => it.y < H + it.size * 3);
-      if (overIn > 0) { if ((overIn -= dt) <= 0) startBury(); }
-      else updateBury(dt);
+      if (overIn > 0) { // she trips first...
+        if ((overIn -= dt) <= 0) {
+          johnT = 0; // ...then John Nintendo rises up behind her
+          pop(g.x, ground - gh * 1.75, "John Nintendo has entered the chat", "#c62828");
+          if (navigator.vibrate) navigator.vibrate([60, 60, 60, 60, 200]);
+        }
+      } else if (johnT < JOHN_ENTER[3]) {
+        johnT += dt;
+        if (johnT >= JOHN_ENTER[3]) startBury(); // ...and the bootstrap.bas rains down on both of them
+      } else {
+        johnT += dt;
+        updateBury(dt);
+      }
       return;
     }
 
@@ -444,7 +461,7 @@
     // keep dropping lines until she's buried (or time runs out)
     if (bury.t < BURY_SPAWN && !buried(hts)) {
       bury.spawnIn -= dt;
-      while (bury.spawnIn <= 0) { addLine(); bury.spawnIn += 0.08; }
+      while (bury.spawnIn <= 0) { addLine(); bury.spawnIn += 0.1; }
     } else bury.t = Math.max(bury.t, BURY_SPAWN);
     let falling = 0;
     for (const l of bury.lines) {
@@ -470,12 +487,14 @@
   // buried = the pile over her is taller than she is
   function buried(hts) {
     const c0 = Math.max(0, Math.floor((g.x - gh * 0.3) / COL)), c1 = Math.min(hts.length - 1, Math.floor((g.x + gh * 0.3) / COL));
-    for (let c = c0; c <= c1; c++) if (hts[c] > ground - gh * 1.15) return false;
+    for (let c = c0; c <= c1; c++) if (hts[c] > ground - gh * 0.6) return false; // lines still falling top it up to about her head, so John's grin stays visible
     return true;
   }
 
   function skipBury() {
     if (state !== "dying") return;
+    overIn = 0;
+    if (johnT < JOHN_ENTER[3]) johnT = JOHN_ENTER[3];
     if (!bury) startBury();
     // drop everything that's left straight onto the pile
     for (let i = 0; i < 2000 && !bury.done; i++) updateBury(1 / 30);
@@ -491,7 +510,23 @@
     return "wave" + [3, 3, 3, 3, 3, 1, 2, 2, 1, 3][Math.floor(g.anim * 4) % 10];
   }
 
+  function johnFrame() {
+    if (johnT < JOHN_ENTER[3]) { let i = 0; while (i < 3 && johnT >= JOHN_ENTER[i]) i++; return "jenter" + i; }
+    const t = (johnT - JOHN_ENTER[3]) % JOHN_LOOP[3];
+    let i = 0; while (i < 3 && t >= JOHN_LOOP[i]) i++;
+    return "jloop" + i;
+  }
+
+  function drawJohn() {
+    const im = imgs[johnFrame()];
+    if (!im || !im.complete || !im.naturalWidth) return false;
+    const k = gh / JOHN_GEZ_H;
+    ctx.drawImage(im, g.x - JOHN_FEET[0] * k, ground - JOHN_FEET[1] * k, JOHN_W * k, JOHN_H * k);
+    return true;
+  }
+
   function drawGezine() {
+    if (johnT >= 0 && drawJohn()) return; // John has her now
     const name = frame(), im = imgs[name];
     const s = gh / SPRITE_H;
     ctx.fillStyle = "rgba(0, 0, 0, .12)";
@@ -663,7 +698,7 @@
     pauseBtn.hidden = true;
     reset(); draw();
     showPanel(
-      "<h2>Headset Hero</h2>" +
+      "<h2>DMCA Dodge</h2>" +
       (reason === "pats" ? "<p>You gave gezine so many headpats she put her headset on.</p>" : "") +
       (DEV.car ? "<p><b>Parked only, please.</b></p>" : "") +
       "<p>Catch ♪ notes, SmileBASIC tokens and ★ stars in her headset. Dodge John Nintendo's DMCA letters. Three strikes and the bootstrap buries her.</p>" +
@@ -763,7 +798,7 @@
     state = "loading";
     W = 0; resize();
     reset();
-    showPanel("<h2>Headset Hero</h2><p>Putting her headset on...</p>", []);
+    showPanel("<h2>DMCA Dodge</h2><p>Putting her headset on...</p>", []);
     await Promise.all([loadSprites(), Promise.race([loadCode(), new Promise((ok) => setTimeout(ok, 2500))])]);
     if (!root.hidden) title(reason);
   }
